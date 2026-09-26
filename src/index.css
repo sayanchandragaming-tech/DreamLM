@@ -1,0 +1,294 @@
+@import "tailwindcss";
+
+@theme {
+  --color-surface-container-high: #e1e8fd;
+  --color-surface-variant: #dce2f8;
+  --color-on-background: #141b2b;
+  --color-tertiary-container: #2c4458;
+  --color-surface-container: #e9edff;
+  --color-surface-dim: #d3daef;
+  --color-background: #faf9ff;
+  --color-on-primary-container: #8db0e4;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-primary-fixed-variant: #214875;
+  --color-secondary: #2f6190;
+  --color-on-secondary-fixed: #001d35;
+  --color-surface-container-low: #f1f3ff;
+  --color-primary: #002c55;
+  --color-on-secondary: #ffffff;
+  --color-on-primary-fixed: #001c39;
+  --color-on-primary: #ffffff;
+  --color-secondary-fixed-dim: #9bcaff;
+  --color-outline-variant: #c3c6d0;
+  --color-on-surface-variant: #43474f;
+  --color-on-surface: #141b2b;
+  --color-surface: #faf9ff;
+  --color-inverse-primary: #a5c9fd;
+  --color-primary-fixed: #d4e3ff;
+  --color-surface-bright: #faf9ff;
+  --color-inverse-on-surface: #edf0ff;
+  --color-inverse-surface: #293040;
+  --color-on-secondary-container: #205583;
+  --color-surface-tint: #3c608f;
+  --color-surface-container-highest: #dce2f8;
+  --color-error: #ba1a1a;
+  --color-secondary-fixed: #d0e4ff;
+  --color-tertiary: #152e41;
+  --color-outline: #737780;
+  --color-on-tertiary: #ffffff;
+  --color-secondary-container: #9bcaff;
+  --color-on-error: #ffffff;
+  --color-tertiary-fixed-dim: #b0c9e2;
+  --color-primary-container: #1b4370;
+  --color-primary-fixed-dim: #a5c9fd;
+  --color-error-container: #ffdad6;
+  --color-on-secondary-fixed-variant: #0e4976;
+  --color-on-tertiary-container: #98b1c9;
+  --color-on-error-container: #93000a;
+  --color-on-tertiary-fixed: #021d30;
+  --color-on-tertiary-fixed-variant: #31495e;
+  --color-tertiary-fixed: #cce5ff;
+
+  --spacing-space-xs: 0.25rem;
+  --spacing-space-sm: 0.5rem;
+  --spacing-space-md: 1rem;
+  --spacing-space-lg: 1.5rem;
+  --spacing-space-xl: 2.5rem;
+  --spacing-margin: 3rem;
+  --spacing-margin-mobile: 1.25rem;
+  --spacing-gutter: 1.5rem;
+  --spacing-gutter-mobile: 1rem;
+
+  --font-headline-sm: "Space Grotesk", sans-serif;
+  --font-headline-md: "Space Grotesk", sans-serif;
+  --font-headline-lg: "Space Grotesk", sans-serif;
+  --font-display-lg: "Space Grotesk", sans-serif;
+  --font-label-sm: "Space Grotesk", sans-serif;
+  --font-label-md: "Space Grotesk", sans-serif;
+  --font-code-notation: "Space Grotesk", monospace;
+  --font-body-sm: "Inter", sans-serif;
+  --font-body-md: "Inter", sans-serif;
+  --font-body-lg: "Inter", sans-serif;
+}
+
+/* ==============================================================
+   1. DEFAULT THEME: SCIENTIFIC ELEGANCE (ARCHIVAL WHITE & COBALT)
+   ============================================================== */
+:root,
+html[data-theme="scientific-elegance"],
+body[data-theme="scientific-elegance"],
+[data-theme="scientific-elegance"],
+.theme-scientific-elegance {
+  color-scheme: light;
+  --color-surface-container-high: #e1e8fd;
+  --color-surface-variant: #dce2f8;
+  --color-on-background: #141b2b;
+  --color-tertiary-container: #2c4458;
+  --color-surface-container: #e9edff;
+  --color-surface-dim: #d3daef;
+  --color-background: #faf9ff;
+  --color-on-primary-container: #8db0e4;
+  --color-surface-container-lowest: #ffffff;
+  --color-on-primary-fixed-variant: #214875;
+  --color-secondary: #2f6190;
+  --color-on-secondary-fixed: #001d35;
+  --color-surface-container-low: #f1f3ff;
+  --color-primary: #002c55;
+  --color-on-secondary: #ffffff;
+  --color-on-primary-fixed: #001c39;
+  --color-on-primary: #ffffff;
+  --color-secondary-fixed-dim: #9bcaff;
+  --color-outline-variant: #c3c6d0;
+  --color-on-surface-variant: #43474f;
+  --color-on-surface: #141b2b;
+  --color-surface: #faf9ff;
+  --color-inverse-primary: #a5c9fd;
+  --color-primary-fixed: #d4e3ff;
+  --color-surface-bright: #faf9ff;
+  --color-inverse-on-surface: #edf0ff;
+  --color-inverse-surface: #293040;
+  --color-on-secondary-container: #205583;
+  --color-surface-tint: #3c608f;
+  --color-surface-container-highest: #dce2f8;
+  --color-error: #ba1a1a;
+  --color-secondary-fixed: #d0e4ff;
+  --color-tertiary: #152e41;
+  --color-outline: #737780;
+  --color-on-tertiary: #ffffff;
+  --color-secondary-container: #9bcaff;
+  --color-on-error: #ffffff;
+  --color-tertiary-fixed-dim: #b0c9e2;
+  --color-primary-container: #1b4370;
+  --color-primary-fixed-dim: #a5c9fd;
+  --color-error-container: #ffdad6;
+  --color-on-secondary-fixed-variant: #0e4976;
+  --color-on-tertiary-container: #98b1c9;
+  --color-on-error-container: #93000a;
+  --color-on-tertiary-fixed: #021d30;
+  --color-on-tertiary-fixed-variant: #31495e;
+  --color-tertiary-fixed: #cce5ff;
+}
+
+/* ==============================================================
+   2. THEME: DEEP ENCLAVE (DARK VELLUM, MIDNIGHT COBALT, CRISP TELEMETRY)
+   ============================================================== */
+html[data-theme="deep-enclave"],
+body[data-theme="deep-enclave"],
+[data-theme="deep-enclave"],
+.theme-deep-enclave {
+  color-scheme: dark;
+  --color-surface: #0a0e17;
+  --color-background: #070a12;
+  --color-surface-container-lowest: #0e1422;
+  --color-surface-container-low: #121929;
+  --color-surface-container: #172033;
+  --color-surface-container-high: #1e2942;
+  --color-surface-container-highest: #263452;
+  --color-surface-variant: #1a2338;
+  --color-surface-dim: #080c15;
+  --color-surface-bright: #151c2d;
+  
+  --color-on-surface: #e2e8f0;
+  --color-on-surface-variant: #94a3b8;
+  --color-on-background: #e2e8f0;
+  --color-outline: #64748b;
+  --color-outline-variant: #334155;
+
+  --color-primary: #38bdf8;
+  --color-on-primary: #031324;
+  --color-primary-container: #0284c7;
+  --color-on-primary-container: #e0f2fe;
+  --color-primary-fixed: #0c4a6e;
+  --color-primary-fixed-dim: #075985;
+  --color-on-primary-fixed: #f0f9ff;
+  --color-on-primary-fixed-variant: #7dd3fc;
+
+  --color-secondary: #60a5fa;
+  --color-on-secondary: #030712;
+  --color-secondary-container: #1e3a8a;
+  --color-on-secondary-container: #bfdbfe;
+  --color-secondary-fixed: #1e293b;
+  --color-secondary-fixed-dim: #0f172a;
+  --color-on-secondary-fixed: #e2e8f0;
+  --color-on-secondary-fixed-variant: #93c5fd;
+
+  --color-tertiary: #a5b4fc;
+  --color-on-tertiary: #030712;
+  --color-tertiary-container: #312e81;
+  --color-on-tertiary-container: #c7d2fe;
+  --color-tertiary-fixed: #1e1b4b;
+  --color-tertiary-fixed-dim: #17133d;
+  --color-on-tertiary-fixed: #e0e7ff;
+  --color-on-tertiary-fixed-variant: #c7d2fe;
+
+  --color-error: #f87171;
+  --color-error-container: #450a0a;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #fecaca;
+  --color-inverse-surface: #f1f5f9;
+  --color-inverse-on-surface: #0f172a;
+  --color-inverse-primary: #0284c7;
+  --color-surface-tint: #38bdf8;
+}
+
+/* ==============================================================
+   3. THEME: IVORY MONOGRAPH (WARM TACTILE IVORY VELLUM & SEPIA CARBON)
+   ============================================================== */
+html[data-theme="ivory-monograph"],
+body[data-theme="ivory-monograph"],
+[data-theme="ivory-monograph"],
+.theme-ivory-monograph {
+  color-scheme: light;
+  --color-surface: #f8f5ee;
+  --color-background: #f2ede2;
+  --color-surface-container-lowest: #ffffff;
+  --color-surface-container-low: #efeae0;
+  --color-surface-container: #e7e0d3;
+  --color-surface-container-high: #dfd7c8;
+  --color-surface-container-highest: #d7cebd;
+  --color-surface-variant: #dfd7c8;
+  --color-surface-dim: #e5decb;
+  --color-surface-bright: #fcfbf8;
+
+  --color-on-surface: #2c251e;
+  --color-on-surface-variant: #615547;
+  --color-on-background: #2c251e;
+  --color-outline: #8a7d6d;
+  --color-outline-variant: #d1c7b7;
+
+  --color-primary: #3e2f23;
+  --color-on-primary: #fbf9f5;
+  --color-primary-container: #564232;
+  --color-on-primary-container: #eadecf;
+  --color-primary-fixed: #ebd9c8;
+  --color-primary-fixed-dim: #ddc6b1;
+  --color-on-primary-fixed: #2b1d12;
+  --color-on-primary-fixed-variant: #483424;
+
+  --color-secondary: #8c5a2b;
+  --color-on-secondary: #ffffff;
+  --color-secondary-container: #f5e4d3;
+  --color-on-secondary-container: #4f2e0f;
+  --color-secondary-fixed: #f3e0cc;
+  --color-secondary-fixed-dim: #e8ceb2;
+  --color-on-secondary-fixed: #331c07;
+  --color-on-secondary-fixed-variant: #6b3f15;
+
+  --color-tertiary: #3c5643;
+  --color-on-tertiary: #ffffff;
+  --color-tertiary-container: #d6e4d8;
+  --color-on-tertiary-container: #152c1c;
+  --color-tertiary-fixed: #d4e4d6;
+  --color-tertiary-fixed-dim: #bdd2c0;
+  --color-on-tertiary-fixed: #0e2213;
+  --color-on-tertiary-fixed-variant: #28402f;
+
+  --color-error: #b3261e;
+  --color-error-container: #f9dedc;
+  --color-on-error: #ffffff;
+  --color-on-error-container: #410e0b;
+  --color-inverse-surface: #312a23;
+  --color-inverse-on-surface: #f8f5ee;
+  --color-inverse-primary: #d9c5b2;
+  --color-surface-tint: #8c5a2b;
+}
+
+@layer base {
+  html, body {
+    background-color: var(--color-surface);
+    color: var(--color-on-surface);
+    font-family: var(--font-body-md);
+    min-height: 100%;
+  }
+
+  /* Smooth, subtle theme transition */
+  *, *::before, *::after {
+    transition-property: color, background-color, border-color, text-decoration-color, fill, stroke, box-shadow;
+    transition-timing-function: cubic-bezier(0.4, 0, 0.2, 1);
+    transition-duration: 150ms;
+  }
+}
+
+.material-symbols-outlined {
+  font-family: 'Material Symbols Outlined';
+  font-weight: normal;
+  font-style: normal;
+  line-height: 1;
+  letter-spacing: normal;
+  text-transform: none;
+  display: inline-block;
+  white-space: nowrap;
+  word-wrap: normal;
+  direction: ltr;
+  -webkit-font-feature-settings: 'liga';
+  -webkit-font-smoothing: antialiased;
+}
+
+@keyframes shimmer {
+  0% { transform: translateX(-100%); }
+  100% { transform: translateX(100%); }
+}
+
+.animate-shimmer {
+  animation: shimmer 2.5s infinite;
+}

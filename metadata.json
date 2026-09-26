@@ -1,0 +1,8 @@
+{
+  "name": "DreamLM - Scientific Reasoning & Computational Workbench",
+  "description": "Theoretical reasoning, computational physics, and mathematical synthesis engineered for frontier scientific discovery.",
+  "requestFramePermissions": [],
+  "majorCapabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}
