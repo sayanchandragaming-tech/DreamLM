@@ -20,6 +20,18 @@ import {
   AdminAuditEvent,
 } from '../services/userService.ts';
 
+function logSupabaseError(operation: string, error: unknown) {
+  const supabaseError = typeof error === 'object' && error !== null
+    ? error as { message?: string; code?: string; details?: string; hint?: string }
+    : undefined;
+  console.error(operation, {
+    message: supabaseError?.message ?? (error instanceof Error ? error.message : String(error)),
+    code: supabaseError?.code,
+    details: supabaseError?.details,
+    hint: supabaseError?.hint,
+  });
+}
+
 interface AdminViewProps {
   onBackToWorkspace: () => void;
   conversations: Conversation[];
@@ -103,7 +115,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         setSelectedUserDetail({ ...userToBan, status: 'Banned', banReason: banReasonInput });
       }
     } catch (error) {
-      console.error('Failed to ban beta user:', error);
+      logSupabaseError('Failed to ban beta user:', error);
       onToast('User ban could not be saved. Check administrator access and try again.');
     }
   };
@@ -117,7 +129,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
         setSelectedUserDetail({ ...user, status: 'Active', banReason: undefined, bannedAt: undefined, bannedBy: undefined });
       }
     } catch (error) {
-      console.error('Failed to unban beta user:', error);
+      logSupabaseError('Failed to unban beta user:', error);
       onToast('User status could not be saved. Check administrator access and try again.');
     }
   };
@@ -135,7 +147,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       await refreshAdminData();
       onToast(`Status updated to ${newStatus}`);
     } catch (error) {
-      console.error('Failed to update beta user status:', error);
+      logSupabaseError('Failed to update beta user status:', error);
       onToast('User status could not be saved. Check administrator access and try again.');
     }
   };
