@@ -1,0 +1,68 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <link rel="icon" type="image/png" href="/dreamlm-logo.png" />
+    <link rel="stylesheet" href="/public-pages.css" />
+    <link rel="preconnect" href="https://fonts.googleapis.com" />
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin />
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&family=Space+Grotesk:wght@400;500;600;700&display=swap" rel="stylesheet" />
+    <title>DreamLM Privacy | Data and Storage</title>
+    <meta name="description" content="Read how the DreamLM website handles sign-in, account details, chat conversations, browser storage, and connected services." />
+    <link rel="canonical" href="https://dreamlm.antideploy.app/privacy/" />
+  </head>
+  <body>
+    <header class="site-header">
+      <div class="site-header-inner">
+        <a class="brand" href="/" aria-label="DreamLM home"><img src="/dreamlm-logo.png" alt="" />DreamLM</a>
+        <nav class="site-nav" aria-label="Main navigation">
+          <a href="/about/">About</a>
+          <a href="/features/">Features</a>
+          <a href="/docs/">Documentation</a>
+          <a href="/privacy/" aria-current="page">Privacy</a>
+          <a href="/terms/">Terms</a>
+        </nav>
+      </div>
+    </header>
+    <main>
+      <p class="eyebrow">Data and storage</p>
+      <h1>DreamLM privacy</h1>
+      <p class="lead">This page describes data flows visible in the current DreamLM website code and user-facing notices.</p>
+      <section>
+        <h2>Sign-in and account information</h2>
+        <p>Email and password sign-in and Google sign-in are handled through Supabase Authentication. The client keeps an authenticated session. When a session is established, the application checks beta-user status through Supabase and uses session details such as email or a profile name to label the workspace.</p>
+        <p>When Google sign-in is selected, the authentication flow also involves Google. Dream Circuit does not control the separate services’ own data practices.</p>
+      </section>
+      <section>
+        <h2>Conversations</h2>
+        <p>The browser stores conversation messages, titles, and timestamps in local storage so they can appear in chat history. When you submit a message, the website sends its text and a conversation session identifier to the configured DreamLM response service and displays the returned response.</p>
+        <p>The application notice says conversations may be reviewed by Dream Circuit for beta testing, debugging, safety, and model improvement. The website code does not specify how long the response service or connected services retain submitted data.</p>
+      </section>
+      <section>
+        <h2>Browser preferences</h2>
+        <p>The selected appearance theme is stored in local storage. Deleting a conversation in the workspace removes it from the browser’s locally stored conversation history; this interface action does not state or guarantee deletion from connected services.</p>
+      </section>
+      <section>
+        <h2>Other services</h2>
+        <p>The website loads typefaces and Material Symbols from Google Fonts. Supabase provides the authentication and beta-account functions used by the app. Chat requests are sent to the DreamLM response service configured for the website. These services receive requests needed for their stated function.</p>
+      </section>
+      <section>
+        <h2>Limits of this description</h2>
+        <p>The repository does not specify service-side retention periods or provide a dedicated privacy request process. This page is limited to behavior that can be verified in the current website and its displayed notices.</p>
+      </section>
+    </main>
+    <footer class="site-footer">
+      <div class="site-footer-inner">
+        <nav class="footer-nav" aria-label="Public pages">
+          <a href="/about/">About</a>
+          <a href="/features/">Features</a>
+          <a href="/docs/">Documentation</a>
+          <a href="/privacy/" aria-current="page">Privacy</a>
+          <a href="/terms/">Terms</a>
+        </nav>
+        <p>DreamLM by Dream Circuit</p>
+      </div>
+    </footer>
+  </body>
+</html>

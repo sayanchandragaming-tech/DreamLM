@@ -258,18 +258,27 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
         </div>
 
         {/* Footer Navigation */}
-        <div className="flex items-center justify-between px-space-xs text-xs">
-          <button
-            onClick={onAdminLoginClick}
-            className="font-label-sm text-label-sm text-secondary hover:text-primary transition-colors flex items-center gap-1 font-semibold"
-            type="button"
-          >
-            <span className="material-symbols-outlined text-xs">lock</span>
-            <span>Admin Panel Login</span>
-          </button>
-          <span className="font-code-notation text-outline text-[11px]">
-            Dream Circuit © 2026
-          </span>
+        <div className="flex flex-col gap-2 px-space-xs text-xs">
+          <div className="flex items-center justify-between gap-2">
+            <button
+              onClick={onAdminLoginClick}
+              className="font-label-sm text-label-sm text-secondary hover:text-primary transition-colors flex items-center gap-1 font-semibold"
+              type="button"
+            >
+              <span className="material-symbols-outlined text-xs">lock</span>
+              <span>Admin Panel Login</span>
+            </button>
+            <span className="font-code-notation text-outline text-[11px]">
+              Dream Circuit © 2026
+            </span>
+          </div>
+          <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]" aria-label="Public pages">
+            <a className="text-secondary hover:text-primary" href="/about/">About</a>
+            <a className="text-secondary hover:text-primary" href="/features/">Features</a>
+            <a className="text-secondary hover:text-primary" href="/docs/">Documentation</a>
+            <a className="text-secondary hover:text-primary" href="/privacy/">Privacy</a>
+            <a className="text-secondary hover:text-primary" href="/terms/">Terms</a>
+          </nav>
         </div>
       </div>
     </div>

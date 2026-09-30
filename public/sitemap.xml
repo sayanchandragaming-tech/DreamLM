@@ -3,4 +3,19 @@
   <url>
     <loc>https://dreamlm.antideploy.app/</loc>
   </url>
+  <url>
+    <loc>https://dreamlm.antideploy.app/about/</loc>
+  </url>
+  <url>
+    <loc>https://dreamlm.antideploy.app/features/</loc>
+  </url>
+  <url>
+    <loc>https://dreamlm.antideploy.app/docs/</loc>
+  </url>
+  <url>
+    <loc>https://dreamlm.antideploy.app/privacy/</loc>
+  </url>
+  <url>
+    <loc>https://dreamlm.antideploy.app/terms/</loc>
+  </url>
 </urlset>

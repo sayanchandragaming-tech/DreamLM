@@ -1,0 +1,182 @@
+* {
+  box-sizing: border-box;
+}
+
+:root {
+  color-scheme: light;
+  font-family: Inter, sans-serif;
+  color: #141b2b;
+  background: #faf9ff;
+  font-synthesis: none;
+  text-rendering: optimizeLegibility;
+}
+
+body {
+  min-width: 320px;
+  min-height: 100vh;
+  margin: 0;
+  line-height: 1.65;
+}
+
+a {
+  color: #214875;
+  text-underline-offset: 0.2em;
+}
+
+a:hover {
+  color: #002c55;
+}
+
+a:focus-visible {
+  outline: 3px solid #2f6190;
+  outline-offset: 3px;
+}
+
+.site-header {
+  border-bottom: 1px solid #dce2f8;
+  background: #fff;
+}
+
+.site-header-inner {
+  width: min(100% - 2rem, 70rem);
+  min-height: 4.5rem;
+  margin-inline: auto;
+  padding-block: 0.75rem;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 1rem 2rem;
+  flex-wrap: wrap;
+}
+
+.brand {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.65rem;
+  color: #002c55;
+  font-family: "Space Grotesk", sans-serif;
+  font-size: 1.15rem;
+  font-weight: 600;
+  text-decoration: none;
+}
+
+.brand img {
+  display: block;
+  width: 2.25rem;
+  height: 2.25rem;
+  object-fit: contain;
+}
+
+.site-nav,
+.footer-nav {
+  display: flex;
+  align-items: center;
+  gap: 0.35rem 1rem;
+  flex-wrap: wrap;
+}
+
+.site-nav a,
+.footer-nav a {
+  padding-block: 0.4rem;
+  font-size: 0.9rem;
+  font-weight: 500;
+}
+
+main {
+  width: min(100% - 2rem, 46rem);
+  min-height: calc(100vh - 12rem);
+  margin: 0 auto;
+  padding-block: 3.5rem 4rem;
+}
+
+.eyebrow {
+  margin: 0 0 0.75rem;
+  color: #2f6190;
+  font-size: 0.8rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+}
+
+h1,
+h2 {
+  color: #002c55;
+  font-family: "Space Grotesk", sans-serif;
+  line-height: 1.2;
+}
+
+h1 {
+  margin: 0 0 1rem;
+  font-size: 2.4rem;
+}
+
+h2 {
+  margin: 2rem 0 0.6rem;
+  font-size: 1.35rem;
+}
+
+h3 {
+  margin: 1.25rem 0 0.4rem;
+  font-size: 1.05rem;
+}
+
+p,
+li {
+  max-width: 72ch;
+}
+
+p {
+  margin: 0 0 1rem;
+}
+
+ul,
+ol {
+  padding-left: 1.35rem;
+}
+
+li + li {
+  margin-top: 0.45rem;
+}
+
+.lead {
+  color: #43474f;
+  font-size: 1.15rem;
+}
+
+.site-footer {
+  border-top: 1px solid #dce2f8;
+  background: #fff;
+}
+
+.site-footer-inner {
+  width: min(100% - 2rem, 70rem);
+  margin-inline: auto;
+  padding-block: 1.25rem 1.75rem;
+}
+
+.site-footer p {
+  margin: 0.75rem 0 0;
+  color: #43474f;
+  font-size: 0.8rem;
+}
+
+@media (max-width: 480px) {
+  .site-header-inner {
+    align-items: flex-start;
+    flex-direction: column;
+    gap: 0.4rem;
+    padding-block: 0.7rem;
+  }
+
+  .site-nav {
+    gap: 0.2rem 0.8rem;
+  }
+
+  main {
+    padding-block: 2.25rem 3rem;
+  }
+
+  h1 {
+    font-size: 1.9rem;
+  }
+}
