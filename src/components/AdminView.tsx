@@ -225,6 +225,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <button
               onClick={onBackToWorkspace}
               className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary font-label-md text-xs font-semibold transition-colors border border-outline-variant/30"
+              aria-label="Back to workspace"
               type="button"
             >
               <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -263,6 +264,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
             <button
               onClick={handleLogout}
               className="flex min-h-11 min-w-11 items-center justify-center gap-1 font-label-md text-xs font-semibold text-outline hover:text-error transition-colors"
+              aria-label="Log out of admin panel"
               type="button"
             >
               <span className="material-symbols-outlined text-base">logout</span>

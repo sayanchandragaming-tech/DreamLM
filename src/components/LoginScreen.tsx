@@ -71,7 +71,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-space-md bg-surface select-none relative">
       {/* Subtle Mathematical Watermark Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-30">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-30" aria-hidden="true">
         <svg
           className="w-[1000px] h-[1000px] text-surface-variant/40"
           fill="none"
@@ -103,7 +103,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             <div className="absolute inset-0 rounded-full bg-surface-container-low animate-pulse"></div>
             {!logoError ? (
               <img
-                alt="Dream Circuit Emblem"
+                alt="DreamLM logo"
                 className="w-16 h-16 object-contain relative z-10 drop-shadow-xs"
                 src={DREAMLM_LOGO_URL}
                 onError={() => setLogoError(true)}
@@ -158,7 +158,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   }}
                   className="w-full pl-10 pr-3 py-2.5 bg-surface text-on-surface font-body-md text-body-md rounded-lg shadow-2xs border border-outline-variant/30 placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all"
                   placeholder="Enter your email"
-                  autoFocus
+                  autoComplete="email"
                   required
                   type="email"
                 />
@@ -217,7 +217,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             type="button"
             onClick={handleGoogleSignInClick}
             disabled={isLoading}
-            className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-all border border-outline-variant/30 text-xs font-medium"
+            className="w-full min-h-11 flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-all border border-outline-variant/30 text-xs font-medium"
             title="Continue with Google"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
@@ -262,7 +262,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <div className="flex items-center justify-between gap-2">
             <button
               onClick={onAdminLoginClick}
-              className="font-label-sm text-label-sm text-secondary hover:text-primary transition-colors flex items-center gap-1 font-semibold"
+              className="min-h-11 font-label-sm text-label-sm text-secondary hover:text-primary transition-colors flex items-center gap-1 font-semibold"
               type="button"
             >
               <span className="material-symbols-outlined text-xs">lock</span>
@@ -273,11 +273,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </span>
           </div>
           <nav className="flex flex-wrap justify-center gap-x-4 gap-y-1 text-[11px]" aria-label="Public pages">
-            <a className="text-secondary hover:text-primary" href="/about/">About</a>
-            <a className="text-secondary hover:text-primary" href="/features/">Features</a>
-            <a className="text-secondary hover:text-primary" href="/docs/">Documentation</a>
-            <a className="text-secondary hover:text-primary" href="/privacy/">Privacy</a>
-            <a className="text-secondary hover:text-primary" href="/terms/">Terms</a>
+            <a className="inline-flex min-h-11 items-center text-secondary hover:text-primary" href="/about/">About</a>
+            <a className="inline-flex min-h-11 items-center text-secondary hover:text-primary" href="/features/">Features</a>
+            <a className="inline-flex min-h-11 items-center text-secondary hover:text-primary" href="/docs/">Documentation</a>
+            <a className="inline-flex min-h-11 items-center text-secondary hover:text-primary" href="/privacy/">Privacy</a>
+            <a className="inline-flex min-h-11 items-center text-secondary hover:text-primary" href="/terms/">Terms</a>
           </nav>
         </div>
       </div>

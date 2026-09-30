@@ -151,6 +151,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
             onClick={onOpenSidebarMobile}
             className="min-h-11 min-w-11 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container lg:hidden"
             title="Open chats sidebar"
+            aria-label="Open chats sidebar"
             type="button"
           >
             <span className="material-symbols-outlined text-[20px]">menu</span>
@@ -176,6 +177,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
             onClick={() => setIsAboutModalOpen(true)}
             className="flex min-h-11 min-w-11 items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-secondary hover:text-primary hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
             title="About DreamLM and Dream Circuit"
+            aria-label="About DreamLM"
             type="button"
           >
             <span className="material-symbols-outlined text-sm">info</span>
@@ -192,6 +194,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                 }}
                 className="min-h-11 min-w-11 text-outline hover:text-primary hover:bg-surface-container rounded-lg transition-colors"
                 title="Conversation options"
+                aria-label="Conversation options"
                 type="button"
               >
                 <span className="material-symbols-outlined text-base">more_vert</span>
@@ -250,6 +253,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
             onClick={onNewChat}
             className="flex min-h-11 min-w-11 items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
             title="New Chat (⌘K)"
+            aria-label="New chat"
             type="button"
           >
             <span className="material-symbols-outlined text-sm">add</span>
@@ -261,6 +265,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
             onClick={onOpenAccountPanel}
             className="flex min-h-11 min-w-11 items-center justify-center gap-2 pl-2 pr-1.5 py-1 rounded-lg hover:bg-surface-container transition-colors text-left"
             title="Account & preferences"
+            aria-label="Account and preferences"
             type="button"
           >
             <span className="font-label-sm text-xs font-medium text-on-surface hidden md:inline truncate max-w-[120px]">
@@ -279,7 +284,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
           /* Welcome Home Screen with DreamLM & Dream Circuit & Founder Info */
           <div className="relative w-full max-w-4xl mx-auto px-space-md sm:px-space-lg py-space-md flex flex-col items-center justify-center flex-1 my-auto transition-opacity duration-300">
             {/* Subtle Mathematical Watermark Background */}
-            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-25">
+            <div className="absolute inset-0 pointer-events-none overflow-hidden z-0 opacity-25" aria-hidden="true">
               <svg className="w-full h-full text-secondary/15" xmlns="http://www.w3.org/2000/svg">
                 <defs>
                   <pattern height="120" id="math-grid-chat" patternUnits="userSpaceOnUse" width="120">
@@ -308,7 +313,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
               <div className="relative w-20 h-20 sm:w-24 sm:h-24 flex items-center justify-center bg-surface-container-lowest rounded-full shadow-md border border-outline-variant/30 mb-1">
                 {!logoError ? (
                   <img
-                    alt="Dream Circuit Orbital Sigil"
+                    alt="DreamLM logo"
                     className="w-16 h-16 sm:w-20 sm:h-20 object-contain"
                     src={DREAMLM_LOGO_URL}
                     onError={() => setLogoError(true)}
@@ -684,6 +689,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
               disabled={isThinking}
               placeholder="Ask DreamLM a scientific query, formulate a theorem, or paste LaTeX..."
               className="min-w-0 flex-1 bg-transparent border-0 outline-none font-body-md text-base sm:text-sm text-on-surface placeholder:text-outline/70 px-2 py-1"
+              aria-label="Message DreamLM"
               type="text"
             />
 
@@ -697,6 +703,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                   : 'bg-surface-container text-outline cursor-not-allowed'
               }`}
               title="Send message"
+              aria-label="Send message"
             >
               <span className="material-symbols-outlined text-[18px]">arrow_upward</span>
             </button>

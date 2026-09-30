@@ -1,10 +1,8 @@
 import React from 'react';
 
-export const DREAMLM_LOGO_URL =
-  'https://lh3.googleusercontent.com/aida/AEtjO1VQXLxTElZpySCS9G9Ro8SGWfTCSc3tvKH7au-LAp76qj5MbQIuJ6JnAVyWI4woGDZ6xmWitEqksgx75hyaldQlcAlBhMTVUOY2pzG4GvqH-ou3A4IGSkK7LroEVqbs8ae8-8JNWEyCaQ-J9C4sBnxqzPIUnoZV9dhkmEgTgns1174Iun5d89qzKuGNFB3uQ2LY7zdg7PN1hkTRwJFNwMsyY9lCkFEfmnyfGAa2HRXRwKaBIdTkMnFTtg';
+export const DREAMLM_LOGO_URL = '/dreamlm-logo.png';
 
-export const DREAMLM_ADMIN_LOGO_URL =
-  'https://lh3.googleusercontent.com/aida/AEtjO1WW7ziiaeig0YShmviTpcye3acLQYzwMFdHQ_EycVgEHLYvwcirN-lMQbKJq0CJ6PHTqtlDeqZSKzi3ofBWecLeWWfzIC7YpQ2_QN4IotVuvQ_60ygM78XdbxqOaAO0Cu0TFVa3k60w2n1IFfgRNtjqm7XLbZebdS5s3KiTG-IlwYSljquMC75yW7yZWWINNO4TLDEc5zS16XL5djrwxZktWZnBK2XVDVJE9dVftc6ujzT2vx2yH3zz';
+export const DREAMLM_ADMIN_LOGO_URL = '/dreamlm-logo.png';
 
 export const OrbitalSigil: React.FC<{ className?: string; animated?: boolean }> = ({
   className = 'w-10 h-10',

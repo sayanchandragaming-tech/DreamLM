@@ -45,7 +45,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-space-md sm:p-space-xl bg-surface select-none relative">
       {/* Background Math Formula Watermarks */}
-      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden flex flex-col justify-between select-none opacity-25">
+      <div className="absolute inset-0 pointer-events-none z-0 overflow-hidden flex flex-col justify-between select-none opacity-25" aria-hidden="true">
         <div className="flex justify-between w-full p-8 text-primary font-code-notation text-display-lg select-none">
           <span>∇²Ψ + \frac&#123;8\pi^2 m&#125;&#123;h^2&#125;(E - V)\Psi = 0</span>
         </div>
@@ -60,7 +60,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
         <div className="bg-surface-container-low px-space-lg py-space-sm flex items-center justify-between border-b border-outline-variant/20">
           <button
             onClick={onBack}
-            className="flex items-center gap-1.5 text-xs font-semibold text-secondary hover:text-primary transition-colors"
+            className="flex min-h-11 items-center gap-1.5 text-xs font-semibold text-secondary hover:text-primary transition-colors"
             type="button"
           >
             <span className="material-symbols-outlined text-sm">arrow_back</span>
@@ -123,7 +123,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-2.5 bg-surface-container-lowest text-on-surface font-body-md text-body-md placeholder:text-outline/60 rounded-lg transition-colors border border-outline-variant/30 focus:outline-none focus:bg-surface-container-low focus:ring-1 focus:ring-primary font-code-notation"
                   placeholder="Enter administrator email"
-                  autoFocus
+                  autoComplete="username"
                   required
                   type="email"
                 />
@@ -146,7 +146,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   id="admin-password"
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
-                  className="w-full pl-10 pr-10 py-2.5 bg-surface-container-lowest text-on-surface font-body-md text-body-md placeholder:text-outline/60 rounded-lg transition-colors border border-outline-variant/30 focus:outline-none focus:bg-surface-container-low focus:ring-1 focus:ring-primary font-code-notation"
+                  className="w-full pl-10 pr-14 py-2.5 bg-surface-container-lowest text-on-surface font-body-md text-body-md placeholder:text-outline/60 rounded-lg transition-colors border border-outline-variant/30 focus:outline-none focus:bg-surface-container-low focus:ring-1 focus:ring-primary font-code-notation"
                   placeholder="Enter administrator password"
                   required
                   type={showPassword ? 'text' : 'password'}
@@ -154,8 +154,9 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                 <button
                   type="button"
                   onClick={() => setShowPassword(!showPassword)}
-                  className="absolute right-3 text-outline hover:text-on-surface transition-colors flex items-center"
+                  className="absolute right-1 min-h-11 min-w-11 text-outline hover:text-on-surface transition-colors flex items-center justify-center"
                   title={showPassword ? 'Hide password' : 'Show password'}
+                  aria-label={showPassword ? 'Hide administrator password' : 'Show administrator password'}
                 >
                   <span className="material-symbols-outlined text-base">
                     {showPassword ? 'visibility_off' : 'visibility'}

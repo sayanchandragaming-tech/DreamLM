@@ -57,7 +57,7 @@ export const Sidebar: React.FC<SidebarProps> = ({
             >
               {!logoError ? (
                 <img
-                  alt="Dream Circuit DreamLM Brand Mark"
+                  alt="DreamLM logo"
                   className="h-8 w-auto object-contain transition-transform group-hover:scale-105"
                   src={DREAMLM_LOGO_URL}
                   onError={() => setLogoError(true)}
@@ -121,26 +121,30 @@ export const Sidebar: React.FC<SidebarProps> = ({
                   return (
                     <div
                       key={chat.id}
-                      className={`group flex items-center justify-between px-space-sm py-2 rounded-lg transition-colors cursor-pointer text-body-sm ${
+                      className={`group flex items-center justify-between px-space-sm py-2 rounded-lg transition-colors text-body-sm ${
                         isActive
                           ? 'bg-surface-container-high text-primary font-medium'
                           : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
                       }`}
-                      onClick={() => {
-                        onSelectConversation(chat.id);
-                        onCloseMobile();
-                      }}
                     >
-                      <div className="flex items-center gap-2 min-w-0 flex-1 pr-1">
+                      <button
+                        type="button"
+                        className="flex min-w-0 flex-1 items-center gap-2 pr-1 text-left"
+                        onClick={() => {
+                          onSelectConversation(chat.id);
+                          onCloseMobile();
+                        }}
+                      >
                         <span className="material-symbols-outlined text-[16px] text-outline shrink-0">
                           chat
                         </span>
                         <span className="truncate">{chat.title || 'Untitled Chat'}</span>
-                      </div>
+                      </button>
                       <button
                         type="button"
                         onClick={(e) => onDeleteConversation(chat.id, e)}
-                        className="opacity-0 group-hover:opacity-100 p-1 rounded hover:bg-surface-container hover:text-error text-outline transition-all"
+                        className="min-h-11 min-w-11 rounded hover:bg-surface-container hover:text-error text-outline transition-all opacity-100 lg:min-h-0 lg:min-w-0 lg:opacity-0 lg:group-hover:opacity-100"
+                        aria-label={`Delete ${chat.title || 'untitled chat'}`}
                         title="Delete chat"
                       >
                         <span className="material-symbols-outlined text-[15px]">delete</span>

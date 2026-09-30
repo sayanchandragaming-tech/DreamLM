@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { DREAMLM_LOGO_URL, OrbitalSigil } from './BrandIcons.tsx';
+import { DREAMLM_LOGO_URL } from './BrandIcons.tsx';
 
 interface AboutModalProps {
   isOpen: boolean;
@@ -16,12 +16,12 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest max-w-lg w-full rounded-xl shadow-2xl border border-outline-variant/40 overflow-hidden flex flex-col">
+      <div className="bg-surface-container-lowest max-w-lg w-full rounded-xl shadow-2xl border border-outline-variant/40 overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="about-modal-title">
         {/* Modal Header */}
         <div className="bg-surface-container-low px-space-lg py-space-sm flex items-center justify-between border-b border-outline-variant/20">
           <div className="flex items-center gap-2">
             <span className="material-symbols-outlined text-secondary text-lg">info</span>
-            <span className="font-headline-sm text-xs font-semibold text-primary uppercase tracking-wider">
+            <span id="about-modal-title" className="font-headline-sm text-xs font-semibold text-primary uppercase tracking-wider">
               About DreamLM
             </span>
           </div>
@@ -39,7 +39,7 @@ export const AboutModal: React.FC<AboutModalProps> = ({ isOpen, onClose }) => {
           {/* Logo & Headline */}
           <div className="flex items-center gap-3 pb-space-sm border-b border-outline-variant/20">
             <div className="w-12 h-12 rounded-xl bg-surface-container flex items-center justify-center border border-outline-variant/30">
-              <OrbitalSigil className="w-8 h-8" />
+              <img className="w-8 h-8 object-contain" src={DREAMLM_LOGO_URL} alt="DreamLM logo" />
             </div>
             <div>
               <h2 className="font-headline-sm text-headline-sm text-primary font-semibold">

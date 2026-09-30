@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useRef } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AppScreen } from './types.ts';
 import {
@@ -17,10 +17,8 @@ import { hasAdminRole } from './services/adminAuth.ts';
 import { recordOrUpdateUser } from './services/userService.ts';
 import { supabase } from './services/supabaseClient.ts';
 import { Sidebar } from './components/Sidebar.tsx';
-import { ChatWorkspace } from './components/ChatWorkspace.tsx';
 import { LoginScreen } from './components/LoginScreen.tsx';
 import { AdminLoginScreen } from './components/AdminLoginScreen.tsx';
-import { AdminView } from './components/AdminView.tsx';
 import { AccountPanel } from './components/AccountPanel.tsx';
 import { BannedScreen } from './components/BannedScreen.tsx';
 import { useTheme, applyThemeToDOM } from './services/themeService.ts';
@@ -58,6 +56,12 @@ async function requestDreamLMResponse(message: string, sessionId: string): Promi
   }
 }
 
+const AdminView = React.lazy(() =>
+  import('./components/AdminView.tsx').then((module) => ({ default: module.AdminView }))
+);
+const ChatWorkspace = React.lazy(() =>
+  import('./components/ChatWorkspace.tsx').then((module) => ({ default: module.ChatWorkspace }))
+);
 
 export default function App() {
   const [currentTheme] = useTheme();
@@ -73,9 +77,9 @@ export default function App() {
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('login');
 
-  const [conversations, setConversations] = useState<Conversation[]>(() =>
-    getStoredConversations()
-  );
+  const [conversations, setConversations] = useState<Conversation[]>([]);
+  const [conversationOwnerId, setConversationOwnerId] = useState<string | null>(null);
+  const conversationOwnerIdRef = useRef<string | null>(null);
   const [activeConversationId, setActiveConversationId] = useState<string | null>(null);
   const [isThinking, setIsThinking] = useState(false);
   const [isAccountPanelOpen, setIsAccountPanelOpen] = useState(false);
@@ -99,6 +103,20 @@ export default function App() {
       if (!isMounted) return;
 
       if (session?.user) {
+        const userId = session.user.id;
+        if (conversationOwnerIdRef.current !== userId) {
+          conversationOwnerIdRef.current = userId;
+          setIsAuthLoading(true);
+          setConversationOwnerId(null);
+          setConversations([]);
+          setActiveConversationId(null);
+          setIsThinking(false);
+          setIsAccountPanelOpen(false);
+          setIsMobileSidebarOpen(false);
+          setConversations(getStoredConversations(userId));
+          setConversationOwnerId(userId);
+        }
+
         setIsAdminUser(hasAdminRole(session.user));
         const email = session.user.email?.trim();
         const metadata = session.user.user_metadata;
@@ -111,6 +129,7 @@ export default function App() {
         const username = metadataName || email || 'Researcher';
 
         setCurrentUserSession({
+          userId,
           username,
           isAuthenticated: true,
           loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
@@ -133,6 +152,13 @@ export default function App() {
           setCurrentUserBanReason(undefined);
         }
       } else {
+        conversationOwnerIdRef.current = null;
+        setConversationOwnerId(null);
+        setConversations([]);
+        setActiveConversationId(null);
+        setIsThinking(false);
+        setIsAccountPanelOpen(false);
+        setIsMobileSidebarOpen(false);
         setIsAdminUser(false);
         setCurrentUserSession(null);
         setIsCurrentActiveUserBanned(false);
@@ -183,9 +209,12 @@ export default function App() {
   const appendAssistantMessage = (
     conversationId: string,
     content: string,
+    userId: string,
     isError = false,
     replaceMessageId?: string,
   ) => {
+    if (conversationOwnerIdRef.current !== userId) return;
+
     const assistantMsg = {
       id: `msg_${Date.now()}_a`,
       role: 'assistant' as const,
@@ -197,13 +226,16 @@ export default function App() {
       ...(isError ? { isError: true } : {}),
     };
 
-    setConversations((prev) => prev.map((conversation) => {
-      if (conversation.id !== conversationId) return conversation;
-      const messages = conversation.messages.filter((message) => message.id !== replaceMessageId);
-      const updated = { ...conversation, messages: [...messages, assistantMsg] };
-      saveConversation(updated);
-      return updated;
-    }));
+    setConversations((prev) => {
+      if (conversationOwnerIdRef.current !== userId) return prev;
+      return prev.map((conversation) => {
+        if (conversation.id !== conversationId) return conversation;
+        const messages = conversation.messages.filter((message) => message.id !== replaceMessageId);
+        const updated = { ...conversation, messages: [...messages, assistantMsg] };
+        saveConversation(updated, userId);
+        return updated;
+      });
+    });
   };
 
   useEffect(() => {
@@ -231,11 +263,19 @@ export default function App() {
 
   const handleSignOut = () => {
     if (!supabase) return;
+    const signingOutUserId = userSession?.userId;
     void supabase.auth.signOut().then(({ error }) => {
       if (error) {
         console.error('Supabase sign-out failed:', error);
         showToast('Sign out failed. Please try again.');
         return;
+      }
+      if (conversationOwnerIdRef.current === signingOutUserId) {
+        conversationOwnerIdRef.current = null;
+        setConversationOwnerId(null);
+        setConversations([]);
+        setActiveConversationId(null);
+        setIsThinking(false);
       }
       setIsAccountPanelOpen(false);
       showToast('Signed out of workspace');
@@ -250,7 +290,9 @@ export default function App() {
 
   const handleDeleteConversation = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
-    const updated = deleteStoredConversation(id);
+    const userId = userSession?.userId;
+    if (!userId || conversationOwnerIdRef.current !== userId) return;
+    const updated = deleteStoredConversation(id, userId);
     setConversations(updated);
     if (activeConversationId === id) {
       setActiveConversationId(null);
@@ -259,16 +301,21 @@ export default function App() {
   };
 
   const handleRenameConversation = (id: string, newTitle: string) => {
+    const userId = userSession?.userId;
+    if (!userId || conversationOwnerIdRef.current !== userId) return;
     setConversations((prev) => {
+      if (conversationOwnerIdRef.current !== userId) return prev;
       const updated = prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c));
       const target = updated.find((c) => c.id === id);
-      if (target) saveConversation(target);
+      if (target) saveConversation(target, userId);
       return updated;
     });
     showToast('Conversation renamed');
   };
 
   const handleSendMessage = (text: string) => {
+    const userId = userSession?.userId;
+    if (!userId || conversationOwnerIdRef.current !== userId) return;
     const timestamp = new Date().toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
@@ -294,7 +341,7 @@ export default function App() {
       };
       const updated = [targetConvo, ...conversations];
       setConversations(updated);
-      saveConversation(targetConvo);
+      saveConversation(targetConvo, userId);
       setActiveConversationId(targetConvo.id);
     } else {
       // Append to active conversation
@@ -306,26 +353,30 @@ export default function App() {
         c.id === targetConvo.id ? targetConvo : c
       );
       setConversations(updated);
-      saveConversation(targetConvo);
+      saveConversation(targetConvo, userId);
     }
 
     setIsThinking(true);
     void requestDreamLMResponse(text, targetConvo.id)
       .then((assistantResponse) => {
-        appendAssistantMessage(targetConvo.id, assistantResponse);
+        appendAssistantMessage(targetConvo.id, assistantResponse, userId);
       })
       .catch((error: unknown) => {
         appendAssistantMessage(
           targetConvo.id,
           'DreamLM is temporarily unavailable. Please try again in a moment.',
+          userId,
           true,
         );
       })
-      .finally(() => setIsThinking(false));
+      .finally(() => {
+        if (conversationOwnerIdRef.current === userId) setIsThinking(false);
+      });
   };
 
   const handleRetryLastMessage = () => {
-    if (!activeConversation) return;
+    const userId = userSession?.userId;
+    if (!userId || conversationOwnerIdRef.current !== userId || !activeConversation) return;
     const retryTarget = [...activeConversation.messages]
       .reverse()
       .find((message) => message.role === 'assistant');
@@ -345,6 +396,7 @@ export default function App() {
         appendAssistantMessage(
           activeConversation.id,
           assistantResponse,
+          userId,
           false,
           retryTarget.isError ? retryTarget.id : undefined,
         );
@@ -353,11 +405,14 @@ export default function App() {
         appendAssistantMessage(
           activeConversation.id,
           'DreamLM is temporarily unavailable. Please try again in a moment.',
+          userId,
           true,
           retryTarget.isError ? retryTarget.id : undefined,
         );
       })
-      .finally(() => setIsThinking(false));
+      .finally(() => {
+        if (conversationOwnerIdRef.current === userId) setIsThinking(false);
+      });
   };
 
   return (
@@ -376,8 +431,11 @@ export default function App() {
         </div>
       )}
 
-      {/* 0. Banned State: If current user session was banned by administrator */}
-      {isCurrentActiveUserBanned && currentScreen === 'chat' ? (
+      {isAuthLoading ? (
+        <div className="min-h-screen flex items-center justify-center bg-surface p-space-lg text-sm text-on-surface-variant" role="status">
+          Loading DreamLM workspace...
+        </div>
+      ) : isCurrentActiveUserBanned && currentScreen === 'chat' ? (
         <BannedScreen
           username={userSession?.username || 'User'}
           reason={currentUserBanReason}
@@ -410,18 +468,24 @@ export default function App() {
           )}
 
           {/* 3. Admin Panel Screen */}
-          {currentScreen === 'admin-panel' && (
-            userSession && isAdminUser ? (
-            <AdminView
-              onBackToWorkspace={() => setCurrentScreen('chat')}
-              conversations={conversations}
-              onToast={showToast}
-            />
-            ) : null
+          {currentScreen === 'admin-panel' && userSession && isAdminUser && (
+            <React.Suspense
+              fallback={(
+                <div className="min-h-screen bg-surface p-space-lg text-sm text-on-surface-variant" role="status">
+                  Loading administration panel...
+                </div>
+              )}
+            >
+              <AdminView
+                onBackToWorkspace={() => setCurrentScreen('chat')}
+                conversations={conversations}
+                onToast={showToast}
+              />
+            </React.Suspense>
           )}
 
           {/* 4. Chat Workspace Screen */}
-          {currentScreen === 'chat' && userSession && (
+          {currentScreen === 'chat' && !isAuthLoading && userSession && conversationOwnerId === userSession.userId && (
             <div className="flex h-screen h-dvh w-full overflow-hidden">
               {/* Sidebar */}
               <Sidebar
@@ -438,19 +502,27 @@ export default function App() {
 
               {/* Main Chat Area */}
               <div className="flex-1 flex flex-col h-full lg:pl-72">
-                <ChatWorkspace
-                  conversation={activeConversation}
-                  onSendMessage={handleSendMessage}
-                  onRetryLastMessage={handleRetryLastMessage}
-                  isThinking={isThinking}
-                  userSession={userSession}
-                  onOpenSidebarMobile={() => setIsMobileSidebarOpen(true)}
-                  onOpenAccountPanel={() => setIsAccountPanelOpen(true)}
-                  onNewChat={handleNewChat}
-                  onRenameConversation={handleRenameConversation}
-                  onDeleteConversation={(id) => handleDeleteConversation(id)}
-                  onToast={showToast}
-                />
+                <React.Suspense
+                  fallback={(
+                    <div className="flex flex-1 items-center justify-center text-sm text-on-surface-variant" role="status">
+                      Loading DreamLM workspace...
+                    </div>
+                  )}
+                >
+                  <ChatWorkspace
+                    conversation={activeConversation}
+                    onSendMessage={handleSendMessage}
+                    onRetryLastMessage={handleRetryLastMessage}
+                    isThinking={isThinking}
+                    userSession={userSession}
+                    onOpenSidebarMobile={() => setIsMobileSidebarOpen(true)}
+                    onOpenAccountPanel={() => setIsAccountPanelOpen(true)}
+                    onNewChat={handleNewChat}
+                    onRenameConversation={handleRenameConversation}
+                    onDeleteConversation={(id) => handleDeleteConversation(id)}
+                    onToast={showToast}
+                  />
+                </React.Suspense>
               </div>
 
               {/* Account Panel / Side Menu */}

@@ -45,7 +45,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
 
   return (
     <div className="fixed inset-0 z-50 bg-black/40 backdrop-blur-xs flex items-center justify-center p-4 select-none animate-in fade-in duration-150">
-      <div className="bg-surface-container-lowest max-w-md w-full rounded-xl shadow-2xl border border-outline-variant/40 overflow-hidden flex flex-col">
+      <div className="bg-surface-container-lowest max-w-md w-full rounded-xl shadow-2xl border border-outline-variant/40 overflow-hidden flex flex-col" role="dialog" aria-modal="true" aria-labelledby="account-panel-title">
         {/* Top Header with Back Navigation */}
         <div className="bg-surface-container-low px-space-lg py-space-sm flex items-center justify-between border-b border-outline-variant/20">
           <button
@@ -63,11 +63,13 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
             <span>{activeView !== 'menu' ? 'Back' : 'Back to Workspace'}</span>
           </button>
           <span className="font-code-notation text-[11px] text-outline font-semibold">
+            <span id="account-panel-title">
             {activeView === 'menu'
               ? 'ACCOUNT MENU'
               : activeView === 'history'
               ? 'CHAT HISTORY'
               : 'CUSTOM THEME'}
+            </span>
           </span>
         </div>
 
@@ -107,7 +109,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
                 {/* 2. Chat History */}
                 <button
                   onClick={() => setActiveView('history')}
-                  className="w-full p-2.5 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-between text-left text-on-surface group"
+                  className="w-full min-h-11 p-2.5 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-between text-left text-on-surface group"
                   type="button"
                 >
                   <div className="flex items-center gap-2.5 text-xs">
@@ -129,7 +131,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
                 {/* 3. Custom Theme */}
                 <button
                   onClick={() => setActiveView('theme')}
-                  className="w-full p-2.5 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-between text-left text-on-surface group"
+                  className="w-full min-h-11 p-2.5 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-between text-left text-on-surface group"
                   type="button"
                 >
                   <div className="flex items-center gap-2.5 text-xs">
@@ -155,7 +157,7 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
                     onClose();
                     onNavigateToAdmin();
                   }}
-                  className="w-full p-2.5 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-between text-left text-on-surface group"
+                  className="w-full min-h-11 p-2.5 rounded-lg hover:bg-surface-container-high transition-colors flex items-center justify-between text-left text-on-surface group"
                   type="button"
                 >
                   <div className="flex items-center gap-2.5 text-xs">
@@ -189,14 +191,14 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
               <div className="pt-2 border-t border-outline-variant/20 flex justify-between items-center">
                 <button
                   onClick={onClose}
-                  className="px-4 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded text-xs font-semibold transition-colors"
+                  className="min-h-11 px-4 py-2 bg-surface-container hover:bg-surface-container-high text-on-surface rounded text-xs font-semibold transition-colors"
                   type="button"
                 >
                   Back
                 </button>
                 <button
                   onClick={onSignOut}
-                  className="px-4 py-2 bg-error/10 hover:bg-error-container/30 text-error rounded text-xs font-semibold transition-colors flex items-center gap-1.5"
+                  className="min-h-11 px-4 py-2 bg-error/10 hover:bg-error-container/30 text-error rounded text-xs font-semibold transition-colors flex items-center gap-1.5"
                   type="button"
                 >
                   <span className="material-symbols-outlined text-sm">logout</span>
@@ -274,17 +276,19 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
                 {THEME_OPTIONS.map((theme) => {
                   const isSelected = currentTheme === theme.id;
                   return (
-                    <div
+                    <button
+                      type="button"
                       key={theme.id}
                       onClick={() => handleThemeChange(theme.id)}
-                      className={`p-3 rounded-lg border transition-all cursor-pointer flex items-center justify-between ${
+                      aria-pressed={isSelected}
+                      className={`w-full p-3 rounded-lg border transition-all flex items-center justify-between text-left ${
                         isSelected
                           ? 'bg-surface-container-high border-secondary text-primary'
                           : 'bg-surface-container-low border-outline-variant/30 hover:border-outline'
                       }`}
                     >
-                      <div className="space-y-0.5">
-                        <div className="flex items-center gap-2">
+                      <span className="flex min-w-0 flex-col space-y-0.5">
+                        <span className="flex items-center gap-2">
                           <span className="text-xs font-semibold text-primary">
                             {theme.name}
                           </span>
@@ -293,14 +297,14 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
                               DEFAULT
                             </span>
                           )}
-                        </div>
-                        <p className="text-[11px] text-on-surface-variant leading-snug">
+                        </span>
+                        <span className="text-[11px] text-on-surface-variant leading-snug">
                           {theme.description}
-                        </p>
-                      </div>
+                        </span>
+                      </span>
 
-                      <div className="shrink-0 pl-2">
-                        <div
+                      <span className="shrink-0 pl-2">
+                        <span
                           className={`w-4 h-4 rounded-full border flex items-center justify-center ${
                             isSelected
                               ? 'border-secondary bg-secondary text-on-secondary'
@@ -310,9 +314,9 @@ export const AccountPanel: React.FC<AccountPanelProps> = ({
                           {isSelected && (
                             <span className="material-symbols-outlined text-[12px]">check</span>
                           )}
-                        </div>
-                      </div>
-                    </div>
+                        </span>
+                      </span>
+                    </button>
                   );
                 })}
               </div>

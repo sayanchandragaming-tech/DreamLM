@@ -4,7 +4,7 @@
  */
 
 import React from 'react';
-import { DREAMLM_LOGO_URL, OrbitalSigil } from './BrandIcons.tsx';
+import { OrbitalSigil } from './BrandIcons.tsx';
 
 interface BannedScreenProps {
   username: string;
@@ -20,7 +20,7 @@ export const BannedScreen: React.FC<BannedScreenProps> = ({
   return (
     <div className="min-h-screen w-full flex items-center justify-center p-space-md sm:p-space-xl bg-surface select-none relative">
       {/* Subtle Mathematical Watermark Background */}
-      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-25">
+      <div className="absolute inset-0 pointer-events-none overflow-hidden flex items-center justify-center opacity-25" aria-hidden="true">
         <svg
           className="w-[1000px] h-[1000px] text-surface-variant/40"
           fill="none"

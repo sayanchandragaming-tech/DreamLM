@@ -25,6 +25,7 @@ export interface Conversation {
 }
 
 export interface UserSession {
+  userId: string;
   username: string;
   isAuthenticated: boolean;
   loginTime: string;
