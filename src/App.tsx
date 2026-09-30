@@ -24,6 +24,40 @@ import { AdminView } from './components/AdminView.tsx';
 import { AccountPanel } from './components/AccountPanel.tsx';
 import { BannedScreen } from './components/BannedScreen.tsx';
 import { useTheme, applyThemeToDOM } from './services/themeService.ts';
+async function requestDreamLMResponse(message: string, sessionId: string): Promise<string> {
+  try {
+    const apiBaseUrl = import.meta.env.VITE_DREAMLM_API_URL?.trim();
+    if (!apiBaseUrl) {
+      throw new Error('VITE_DREAMLM_API_URL is missing. Configure it in .env.local and restart Vite.');
+    }
+
+    const response = await fetch(`${apiBaseUrl.replace(/\/+$/, '')}/chat`, {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({ message, session_id: sessionId }),
+    });
+
+    if (!response.ok) {
+      throw new Error(`DreamLM API returned HTTP ${response.status}.`);
+    }
+
+    const data: unknown = await response.json();
+    if (
+      typeof data !== 'object' ||
+      data === null ||
+      !('response' in data) ||
+      typeof data.response !== 'string'
+    ) {
+      throw new Error('DreamLM API returned an invalid response.');
+    }
+
+    return data.response;
+  } catch (error) {
+    console.error(`DreamLM API request failed for session ${sessionId}:`, error);
+    throw error;
+  }
+}
+
 
 export default function App() {
   const [currentTheme] = useTheme();
@@ -51,6 +85,32 @@ export default function App() {
 
   const showToast = (msg: string) => {
     setToastMessage(msg);
+  };
+
+  const appendAssistantMessage = (
+    conversationId: string,
+    content: string,
+    isError = false,
+    replaceMessageId?: string,
+  ) => {
+    const assistantMsg = {
+      id: `msg_${Date.now()}_a`,
+      role: 'assistant' as const,
+      content,
+      timestamp: new Date().toLocaleTimeString([], {
+        hour: '2-digit',
+        minute: '2-digit',
+      }),
+      ...(isError ? { isError: true } : {}),
+    };
+
+    setConversations((prev) => prev.map((conversation) => {
+      if (conversation.id !== conversationId) return conversation;
+      const messages = conversation.messages.filter((message) => message.id !== replaceMessageId);
+      const updated = { ...conversation, messages: [...messages, assistantMsg] };
+      saveConversation(updated);
+      return updated;
+    }));
   };
 
   useEffect(() => {
@@ -175,50 +235,55 @@ export default function App() {
       saveConversation(targetConvo);
     }
 
-    // Trigger subtle DreamLM thinking animation
     setIsThinking(true);
-
-    // AI connection is NOT implemented yet:
-    // After realistic brief delay, show proper temporary connection error with Retry option
-    setTimeout(() => {
-      setIsThinking(false);
-
-      const errorMsg = {
-        id: `msg_${Date.now()}_a`,
-        role: 'assistant' as const,
-        content:
+    void requestDreamLMResponse(text, targetConvo.id)
+      .then((assistantResponse) => {
+        appendAssistantMessage(targetConvo.id, assistantResponse);
+      })
+      .catch((error: unknown) => {
+        appendAssistantMessage(
+          targetConvo.id,
           'DreamLM is temporarily unavailable. Please try again in a moment.',
-        timestamp: new Date().toLocaleTimeString([], {
-          hour: '2-digit',
-          minute: '2-digit',
-        }),
-        isError: true,
-      };
-
-      setConversations((prev) => {
-        return prev.map((c) => {
-          if (c.id === targetConvo.id) {
-            const updated = {
-              ...c,
-              messages: [...c.messages, errorMsg],
-            };
-            saveConversation(updated);
-            return updated;
-          }
-          return c;
-        });
-      });
-    }, 1300);
+          true,
+        );
+      })
+      .finally(() => setIsThinking(false));
   };
 
   const handleRetryLastMessage = () => {
     if (!activeConversation) return;
+    const retryTarget = [...activeConversation.messages]
+      .reverse()
+      .find((message) => message.role === 'assistant');
+    if (!retryTarget) return;
+    const assistantIndex = activeConversation.messages.findIndex(
+      (message) => message.id === retryTarget.id,
+    );
+    const userMessage = activeConversation.messages
+      .slice(0, assistantIndex)
+      .reverse()
+      .find((message) => message.role === 'user');
+    if (!userMessage) return;
 
     setIsThinking(true);
-    setTimeout(() => {
-      setIsThinking(false);
-      showToast('Connection re-attempted: AI backend pending integration');
-    }, 1200);
+    void requestDreamLMResponse(userMessage.content, activeConversation.id)
+      .then((assistantResponse) => {
+        appendAssistantMessage(
+          activeConversation.id,
+          assistantResponse,
+          false,
+          retryTarget.isError ? retryTarget.id : undefined,
+        );
+      })
+      .catch((error: unknown) => {
+        appendAssistantMessage(
+          activeConversation.id,
+          'DreamLM is temporarily unavailable. Please try again in a moment.',
+          true,
+          retryTarget.isError ? retryTarget.id : undefined,
+        );
+      })
+      .finally(() => setIsThinking(false));
   };
 
   // Check if current user is banned

@@ -472,7 +472,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                           <span>Retry</span>
                         </button>
                         <span className="font-code-notation text-[11px] text-outline">
-                          Private beta backend integration pending
+                          Check that the DreamLM API bridge is available
                         </span>
                       </div>
                     </div>
