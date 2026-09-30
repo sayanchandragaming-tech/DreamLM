@@ -38,6 +38,14 @@ interface AdminViewProps {
   onToast: (msg: string) => void;
 }
 
+const ADMIN_TABS = [
+  { id: 'overview', label: 'Overview', icon: 'dashboard' },
+  { id: 'users', label: 'Users & Beta Access', icon: 'group' },
+  { id: 'conversations', label: 'Conversations', icon: 'forum' },
+  { id: 'system-control', label: 'System Control', icon: 'precision_manufacturing' },
+  { id: 'audit', label: 'Audit Trail', icon: 'history' },
+] as const;
+
 export const AdminView: React.FC<AdminViewProps> = ({
   onBackToWorkspace,
   conversations,
@@ -216,11 +224,11 @@ export const AdminView: React.FC<AdminViewProps> = ({
             {/* Back Button */}
             <button
               onClick={onBackToWorkspace}
-              className="flex items-center gap-1.5 px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary font-label-md text-xs font-semibold transition-colors border border-outline-variant/30"
+              className="flex min-h-11 min-w-11 items-center justify-center gap-1.5 px-2 sm:px-3 py-1.5 rounded-lg bg-surface-container-low hover:bg-surface-container text-primary font-label-md text-xs font-semibold transition-colors border border-outline-variant/30"
               type="button"
             >
               <span className="material-symbols-outlined text-sm">arrow_back</span>
-              <span>Back to Workspace</span>
+              <span className="hidden sm:inline">Back to Workspace</span>
             </button>
 
             <div className="h-4 w-px bg-surface-container-high hidden sm:block"></div>
@@ -236,25 +244,25 @@ export const AdminView: React.FC<AdminViewProps> = ({
               </span>
             </div>
 
-            <span className="font-label-sm text-label-sm uppercase px-space-xs py-0.5 bg-secondary-fixed text-on-secondary-fixed-variant rounded-lg font-semibold border border-secondary/20 text-[10px]">
+            <span className="hidden md:inline font-label-sm text-label-sm uppercase px-space-xs py-0.5 bg-secondary-fixed text-on-secondary-fixed-variant rounded-lg font-semibold border border-secondary/20 text-[10px]">
               Private Beta Control
             </span>
           </div>
 
           <div className="flex items-center gap-space-md">
             {/* Real Status Indicator */}
-            <div className="flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-low rounded-lg border border-outline-variant/20">
+            <div className="hidden lg:flex items-center gap-space-xs px-space-sm py-1 bg-surface-container-low rounded-lg border border-outline-variant/20">
               <span className="w-2 h-2 rounded-full bg-secondary"></span>
               <span className="font-code-notation text-code-notation text-on-surface-variant uppercase font-medium text-[11px]">
                 Enclave Node: Active
               </span>
             </div>
 
-            <div className="h-4 w-px bg-surface-container-high"></div>
+            <div className="hidden lg:block h-4 w-px bg-surface-container-high"></div>
 
             <button
               onClick={handleLogout}
-              className="flex items-center gap-1 font-label-md text-xs font-semibold text-outline hover:text-error transition-colors"
+              className="flex min-h-11 min-w-11 items-center justify-center gap-1 font-label-md text-xs font-semibold text-outline hover:text-error transition-colors"
               type="button"
             >
               <span className="material-symbols-outlined text-base">logout</span>
@@ -264,8 +272,30 @@ export const AdminView: React.FC<AdminViewProps> = ({
         </div>
       </header>
 
+      <nav
+        aria-label="Admin sections"
+        className="fixed top-16 left-0 right-0 z-30 flex gap-1 overflow-x-auto border-b border-outline-variant/30 bg-surface-container-lowest px-space-sm py-1 lg:hidden"
+      >
+        {ADMIN_TABS.map((tab) => (
+          <button
+            key={tab.id}
+            onClick={() => setCurrentTab(tab.id)}
+            className={`flex min-h-11 shrink-0 items-center gap-2 rounded-lg px-3 text-xs font-semibold transition-colors ${
+              currentTab === tab.id
+                ? 'bg-primary-container text-on-primary'
+                : 'text-on-surface-variant hover:bg-surface-container-high hover:text-on-surface'
+            }`}
+            type="button"
+            aria-current={currentTab === tab.id ? 'page' : undefined}
+          >
+            <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
+            <span>{tab.label}</span>
+          </button>
+        ))}
+      </nav>
+
       {/* Admin Sidebar */}
-      <aside className="fixed left-0 top-16 bottom-0 w-64 bg-surface-container-lowest z-30 flex flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-r border-outline-variant/30">
+      <aside className="fixed left-0 top-16 bottom-0 hidden w-64 bg-surface-container-lowest z-30 flex-col justify-between shadow-[0_1px_8px_rgba(0,0,0,0.04)] border-r border-outline-variant/30 lg:flex">
         <div className="flex flex-col flex-1 overflow-y-auto py-space-md">
           <div className="px-space-md mb-space-sm">
             <span className="font-label-sm text-[11px] uppercase tracking-wider text-outline font-semibold">
@@ -273,18 +303,15 @@ export const AdminView: React.FC<AdminViewProps> = ({
             </span>
           </div>
           <nav className="flex flex-col gap-1 px-space-sm">
-            {[
-              { id: 'overview', label: 'Overview', icon: 'dashboard' },
-              { id: 'users', label: 'Users & Beta Access', icon: 'group', badge: bannedUsersCount > 0 ? `${bannedUsersCount} banned` : undefined },
-              { id: 'conversations', label: 'Conversations', icon: 'forum' },
-              { id: 'system-control', label: 'System Control', icon: 'precision_manufacturing' },
-              { id: 'audit', label: 'Audit Trail', icon: 'history' },
-            ].map((tab) => {
+            {ADMIN_TABS.map((tab) => {
               const isActive = currentTab === tab.id;
+              const badge = tab.id === 'users' && bannedUsersCount > 0
+                ? `${bannedUsersCount} banned`
+                : undefined;
               return (
                 <button
                   key={tab.id}
-                  onClick={() => setCurrentTab(tab.id as any)}
+                  onClick={() => setCurrentTab(tab.id)}
                   className={`flex items-center justify-between px-3 py-2 transition-colors rounded-lg font-label-md text-xs text-left ${
                     isActive
                       ? 'bg-primary-container text-on-primary font-semibold shadow-xs'
@@ -296,9 +323,9 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     <span className="material-symbols-outlined text-[18px]">{tab.icon}</span>
                     <span>{tab.label}</span>
                   </div>
-                  {tab.badge && (
+                  {badge && (
                     <span className="text-[10px] bg-error-container text-error px-1.5 py-0.5 rounded font-code-notation font-semibold">
-                      {tab.badge}
+                      {badge}
                     </span>
                   )}
                 </button>
@@ -323,7 +350,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       </aside>
 
       {/* Main Admin Content */}
-      <div className="pl-64 pt-16">
+      <div className="pt-30 lg:pl-64 lg:pt-16">
         <main className="w-full min-h-screen bg-surface p-space-md sm:p-space-xl">
           <div className="max-w-5xl mx-auto space-y-space-lg">
             {adminDataError && (

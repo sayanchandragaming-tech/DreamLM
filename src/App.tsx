@@ -422,7 +422,7 @@ export default function App() {
 
           {/* 4. Chat Workspace Screen */}
           {currentScreen === 'chat' && userSession && (
-            <div className="flex h-screen w-full overflow-hidden">
+            <div className="flex h-screen h-dvh w-full overflow-hidden">
               {/* Sidebar */}
               <Sidebar
                 conversations={conversations}

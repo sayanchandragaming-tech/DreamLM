@@ -142,14 +142,14 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
   const hasMessages = conversation && conversation.messages.length > 0;
 
   return (
-    <div className="flex flex-col h-screen w-full relative bg-surface select-none overflow-hidden">
+    <div className="flex flex-col h-screen h-dvh w-full relative bg-surface select-none overflow-hidden">
       {/* Top Header Bar */}
       <header className="h-16 px-space-md sm:px-space-lg flex items-center justify-between border-b border-outline-variant/30 bg-surface/85 backdrop-blur-xl z-20 shrink-0">
-        <div className="flex items-center gap-space-sm">
+        <div className="flex items-center gap-0.5 sm:gap-space-sm">
           {/* Mobile Hamburger Toggle */}
           <button
             onClick={onOpenSidebarMobile}
-            className="p-1.5 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container lg:hidden"
+            className="min-h-11 min-w-11 rounded-lg text-outline hover:text-on-surface hover:bg-surface-container lg:hidden"
             title="Open chats sidebar"
             type="button"
           >
@@ -158,9 +158,9 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
 
           {/* Model Spec Badge */}
           <div className="flex items-center gap-space-xs text-on-surface-variant font-code-notation text-xs">
-            <span className="material-symbols-outlined text-[16px] text-secondary">memory</span>
+            <span className="material-symbols-outlined hidden text-[16px] text-secondary sm:inline">memory</span>
             <span className="text-primary font-semibold">DreamLM</span>
-            <span className="text-outline">/</span>
+            <span className="hidden text-outline sm:inline">/</span>
             <span className="hidden sm:inline text-on-surface-variant">Private Beta</span>
           </div>
 
@@ -170,11 +170,11 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
         </div>
 
         {/* Right Header Actions */}
-        <div className="flex items-center gap-space-sm">
+        <div className="flex items-center gap-1 sm:gap-space-sm">
           {/* About DreamLM Trigger */}
           <button
             onClick={() => setIsAboutModalOpen(true)}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-secondary hover:text-primary hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
+            className="flex min-h-11 min-w-11 items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-secondary hover:text-primary hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
             title="About DreamLM and Dream Circuit"
             type="button"
           >
@@ -190,7 +190,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                   e.stopPropagation();
                   setIsConvoMenuOpen(!isConvoMenuOpen);
                 }}
-                className="p-1.5 text-outline hover:text-primary hover:bg-surface-container rounded-lg transition-colors"
+                className="min-h-11 min-w-11 text-outline hover:text-primary hover:bg-surface-container rounded-lg transition-colors"
                 title="Conversation options"
                 type="button"
               >
@@ -248,7 +248,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
 
           <button
             onClick={onNewChat}
-            className="flex items-center gap-1 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
+            className="flex min-h-11 min-w-11 items-center justify-center gap-1 px-2.5 py-1 text-xs font-semibold text-primary hover:bg-surface-container rounded-lg transition-colors border border-outline-variant/30"
             title="New Chat (⌘K)"
             type="button"
           >
@@ -259,7 +259,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
           {/* Account Profile Trigger */}
           <button
             onClick={onOpenAccountPanel}
-            className="flex items-center gap-2 pl-2 pr-1.5 py-1 rounded-lg hover:bg-surface-container transition-colors text-left"
+            className="flex min-h-11 min-w-11 items-center justify-center gap-2 pl-2 pr-1.5 py-1 rounded-lg hover:bg-surface-container transition-colors text-left"
             title="Account & preferences"
             type="button"
           >
@@ -485,7 +485,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
                           : 'bg-surface-container-lowest text-on-surface rounded-tl-none border border-outline-variant/30 shadow-xs'
                       }`}
                     >
-                      <p className="whitespace-pre-wrap">{msg.content}</p>
+                      <p className="whitespace-pre-wrap break-words">{msg.content}</p>
                     </div>
                   )}
 
@@ -666,7 +666,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
             <button
               type="button"
               onClick={() => setShowMathShelf(!showMathShelf)}
-              className={`w-8 h-8 rounded-lg flex items-center justify-center transition-colors text-xs font-code-notation font-semibold ${
+              className={`min-w-11 min-h-11 rounded-lg flex items-center justify-center transition-colors text-xs font-code-notation font-semibold ${
                 showMathShelf
                   ? 'bg-primary text-on-primary'
                   : 'text-on-surface-variant hover:text-primary hover:bg-surface-container'
@@ -683,7 +683,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
               onChange={(e) => setInputText(e.target.value)}
               disabled={isThinking}
               placeholder="Ask DreamLM a scientific query, formulate a theorem, or paste LaTeX..."
-              className="flex-1 bg-transparent border-0 outline-none font-body-md text-sm text-on-surface placeholder:text-outline/70 px-2 py-1"
+              className="min-w-0 flex-1 bg-transparent border-0 outline-none font-body-md text-base sm:text-sm text-on-surface placeholder:text-outline/70 px-2 py-1"
               type="text"
             />
 
@@ -691,7 +691,7 @@ export const ChatWorkspace: React.FC<ChatWorkspaceProps> = ({
             <button
               type="submit"
               disabled={!inputText.trim() || isThinking}
-              className={`w-9 h-9 rounded-lg flex items-center justify-center transition-all ${
+              className={`min-w-11 min-h-11 rounded-lg flex items-center justify-center transition-all ${
                 inputText.trim() && !isThinking
                   ? 'bg-primary hover:bg-primary-container text-on-primary shadow-xs hover:scale-105 active:scale-95'
                   : 'bg-surface-container text-outline cursor-not-allowed'
