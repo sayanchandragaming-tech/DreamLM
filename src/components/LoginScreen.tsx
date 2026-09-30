@@ -5,55 +5,63 @@
 
 import React, { useState } from 'react';
 import { DREAMLM_LOGO_URL, OrbitalSigil } from './BrandIcons.tsx';
-import { isUserBanned, recordOrUpdateUser } from '../services/userService.ts';
+import { supabase } from '../services/supabaseClient.ts';
 
 interface LoginScreenProps {
-  onLogin: (username: string) => void;
   onAdminLoginClick: () => void;
 }
 
 export const LoginScreen: React.FC<LoginScreenProps> = ({
-  onLogin,
   onAdminLoginClick,
 }) => {
-  const [username, setUsername] = useState('');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [logoError, setLogoError] = useState(false);
   const [isLoading, setIsLoading] = useState(false);
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
 
-  const handleSubmit = (e: React.FormEvent) => {
+  const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMessage(null);
-    const cleanUser = username.trim() || 'researcher';
-
-    // Check if user is banned
-    if (isUserBanned(cleanUser)) {
-      setErrorMessage(`Access Denied: Account "${cleanUser}" has been suspended from the DreamLM Private Beta by an administrator.`);
+    if (!supabase) {
+      setErrorMessage('Authentication is not configured. Contact the Dream Circuit administrator.');
       return;
     }
 
     setIsLoading(true);
-    setTimeout(() => {
-      const recordResult = recordOrUpdateUser(cleanUser, 'Researcher');
-      if (!recordResult.allowed) {
-        setIsLoading(false);
-        setErrorMessage(recordResult.error || `Account "${cleanUser}" is suspended.`);
-        return;
-      }
-      onLogin(cleanUser);
+    try {
+      const { error } = await supabase.auth.signInWithPassword({
+        email: email.trim(),
+        password,
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Supabase email sign-in failed:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Email sign-in failed. Please try again.');
+    } finally {
       setIsLoading(false);
-    }, 400);
+    }
   };
 
-  const handleGoogleSignInClick = () => {
+  const handleGoogleSignInClick = async () => {
     setErrorMessage(null);
-    const testGoogleUser = username.trim() || 'google.researcher';
-    if (isUserBanned(testGoogleUser)) {
-      setErrorMessage(`Access Denied: Account "${testGoogleUser}" has been suspended from the DreamLM Private Beta by an administrator.`);
+    if (!supabase) {
+      setErrorMessage('Authentication is not configured. Contact the Dream Circuit administrator.');
       return;
     }
-    recordOrUpdateUser(testGoogleUser, 'Researcher');
-    onLogin(testGoogleUser);
+
+    setIsLoading(true);
+    try {
+      const { error } = await supabase.auth.signInWithOAuth({
+        provider: 'google',
+        options: { redirectTo: window.location.origin },
+      });
+      if (error) throw error;
+    } catch (error) {
+      console.error('Supabase Google sign-in failed:', error);
+      setErrorMessage(error instanceof Error ? error.message : 'Google sign-in failed. Please try again.');
+      setIsLoading(false);
+    }
   };
 
   return (
@@ -125,36 +133,51 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
             </div>
           )}
 
-          {/* Temporary Sign-In Form */}
           <form onSubmit={handleSubmit} className="w-full flex flex-col gap-space-md">
             <div className="flex flex-col gap-1.5">
               <label
                 className="font-label-md text-label-md text-primary font-semibold flex justify-between"
-                htmlFor="username-input"
+                htmlFor="email-input"
               >
-                <span>Username or Email</span>
-                <span className="text-on-surface-variant font-code-notation text-label-sm font-normal text-[11px]">
-                  Testing Identity
-                </span>
+                <span>Email</span>
               </label>
               <div className="relative">
                 <span className="material-symbols-outlined absolute left-3 top-3 text-secondary text-lg select-none">
                   account_circle
                 </span>
                 <input
-                  id="username-input"
-                  value={username}
+                  id="email-input"
+                  value={email}
                   onChange={(e) => {
-                    setUsername(e.target.value);
+                    setEmail(e.target.value);
                     if (errorMessage) setErrorMessage(null);
                   }}
                   className="w-full pl-10 pr-3 py-2.5 bg-surface text-on-surface font-body-md text-body-md rounded-lg shadow-2xs border border-outline-variant/30 placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all"
-                  placeholder="Enter your username or email"
+                  placeholder="Enter your email"
                   autoFocus
                   required
-                  type="text"
+                  type="email"
                 />
               </div>
+            </div>
+
+            <div className="flex flex-col gap-1.5">
+              <label className="font-label-md text-label-md text-primary font-semibold" htmlFor="password-input">
+                Password
+              </label>
+              <input
+                id="password-input"
+                value={password}
+                onChange={(e) => {
+                  setPassword(e.target.value);
+                  if (errorMessage) setErrorMessage(null);
+                }}
+                className="w-full px-3 py-2.5 bg-surface text-on-surface font-body-md text-body-md rounded-lg shadow-2xs border border-outline-variant/30 placeholder:text-outline focus:outline-none focus:bg-surface-container-lowest focus:ring-1 focus:ring-primary transition-all"
+                placeholder="Enter your password"
+                autoComplete="current-password"
+                required
+                type="password"
+              />
             </div>
 
             <button
@@ -167,22 +190,21 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                   <span className="material-symbols-outlined text-sm animate-spin">
                     progress_activity
                   </span>
-                  <span>Entering Workspace...</span>
+                  <span>Signing in...</span>
                 </>
               ) : (
                 <>
-                  <span>Continue to Workspace</span>
+                  <span>Sign in with Email</span>
                   <span className="material-symbols-outlined text-sm">arrow_forward</span>
                 </>
               )}
             </button>
           </form>
 
-          {/* Google Sign-in Placeholder (structured for future implementation) */}
           <div className="w-full flex items-center my-space-md gap-3">
             <div className="h-px bg-surface-container-high flex-1"></div>
             <span className="font-code-notation text-label-sm text-outline font-medium tracking-wider text-[11px]">
-              AUTHENTICATION INTEGRATION
+              OR
             </span>
             <div className="h-px bg-surface-container-high flex-1"></div>
           </div>
@@ -190,8 +212,9 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
           <button
             type="button"
             onClick={handleGoogleSignInClick}
+            disabled={isLoading}
             className="w-full flex items-center justify-center gap-3 py-2.5 px-4 rounded-lg bg-surface-container-low text-on-surface hover:bg-surface-container transition-all border border-outline-variant/30 text-xs font-medium"
-            title="Google Sign-In will be connected via Supabase/OAuth in production"
+            title="Continue with Google"
           >
             <svg className="w-4 h-4 shrink-0" viewBox="0 0 24 24" xmlns="http://www.w3.org/2000/svg">
               <path
@@ -211,7 +234,7 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
                 fill="#EA4335"
               ></path>
             </svg>
-            <span>Continue with Google (Temporary Test Sign-in)</span>
+            <span>Continue with Google</span>
           </button>
 
           {/* Private Beta Notice */}

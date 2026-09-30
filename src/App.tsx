@@ -4,6 +4,7 @@
  */
 
 import React, { useState, useEffect } from 'react';
+import type { Session } from '@supabase/supabase-js';
 import { AppScreen } from './types.ts';
 import {
   Conversation,
@@ -11,11 +12,10 @@ import {
   getStoredConversations,
   saveConversation,
   deleteStoredConversation,
-  getUserSession,
-  setUserSession,
 } from './services/chatStorage.ts';
 import { isAdminAuthenticated } from './services/adminAuth.ts';
 import { isUserBanned, getUserDetails, recordOrUpdateUser } from './services/userService.ts';
+import { supabase } from './services/supabaseClient.ts';
 import { Sidebar } from './components/Sidebar.tsx';
 import { ChatWorkspace } from './components/ChatWorkspace.tsx';
 import { LoginScreen } from './components/LoginScreen.tsx';
@@ -66,13 +66,9 @@ export default function App() {
     applyThemeToDOM(currentTheme);
   }, [currentTheme]);
 
-  const [userSession, setCurrentUserSession] = useState<UserSession | null>(() =>
-    getUserSession()
-  );
-  const [currentScreen, setCurrentScreen] = useState<AppScreen>(() => {
-    const session = getUserSession();
-    return session ? 'chat' : 'login';
-  });
+  const [userSession, setCurrentUserSession] = useState<UserSession | null>(null);
+  const [isAuthLoading, setIsAuthLoading] = useState(true);
+  const [currentScreen, setCurrentScreen] = useState<AppScreen>('login');
 
   const [conversations, setConversations] = useState<Conversation[]>(() =>
     getStoredConversations()
@@ -86,6 +82,68 @@ export default function App() {
   const showToast = (msg: string) => {
     setToastMessage(msg);
   };
+
+  useEffect(() => {
+    if (!supabase) {
+      setIsAuthLoading(false);
+      return;
+    }
+
+    let isMounted = true;
+    const applyAuthSession = (session: Session | null) => {
+      if (!isMounted) return;
+
+      if (session?.user) {
+        const email = session.user.email?.trim();
+        const metadata = session.user.user_metadata;
+        const metadataName = typeof metadata.full_name === 'string'
+          ? metadata.full_name
+          : typeof metadata.name === 'string'
+            ? metadata.name
+            : undefined;
+        const identity = email || metadataName || session.user.id;
+        const trackedUser = recordOrUpdateUser(identity, 'Researcher');
+        const username = trackedUser.user?.username || metadataName || email || 'Researcher';
+
+        setCurrentUserSession({
+          username,
+          isAuthenticated: true,
+          loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
+        });
+        setCurrentScreen('chat');
+      } else {
+        setCurrentUserSession(null);
+        setCurrentScreen('login');
+      }
+
+      setIsAuthLoading(false);
+    };
+
+    const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
+      applyAuthSession(session);
+    });
+
+    void supabase.auth.getSession()
+      .then(({ data, error }) => {
+        if (error) throw error;
+        applyAuthSession(data.session);
+      })
+      .catch((error: unknown) => {
+        console.error('Supabase session lookup failed:', error);
+        applyAuthSession(null);
+      });
+
+    return () => {
+      isMounted = false;
+      subscription.unsubscribe();
+    };
+  }, []);
+
+  useEffect(() => {
+    if (!isAuthLoading && !userSession && currentScreen === 'chat') {
+      setCurrentScreen('login');
+    }
+  }, [currentScreen, isAuthLoading, userSession]);
 
   const appendAssistantMessage = (
     conversationId: string,
@@ -136,36 +194,17 @@ export default function App() {
   const activeConversation =
     conversations.find((c) => c.id === activeConversationId) || null;
 
-  const handleLogin = (username: string) => {
-    // Check if user is banned
-    if (isUserBanned(username)) {
-      showToast('Access denied: account is banned');
-      return;
-    }
-
-    const reg = recordOrUpdateUser(username, 'Researcher');
-    if (!reg.allowed) {
-      showToast(reg.error || 'Account suspended');
-      return;
-    }
-
-    const session: UserSession = {
-      username,
-      isAuthenticated: true,
-      loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
-    };
-    setUserSession(session);
-    setCurrentUserSession(session);
-    setCurrentScreen('chat');
-    showToast(`Welcome, ${username}`);
-  };
-
   const handleSignOut = () => {
-    setUserSession(null);
-    setCurrentUserSession(null);
-    setIsAccountPanelOpen(false);
-    setCurrentScreen('login');
-    showToast('Signed out of workspace');
+    if (!supabase) return;
+    void supabase.auth.signOut().then(({ error }) => {
+      if (error) {
+        console.error('Supabase sign-out failed:', error);
+        showToast('Sign out failed. Please try again.');
+        return;
+      }
+      setIsAccountPanelOpen(false);
+      showToast('Signed out of workspace');
+    });
   };
 
   const handleNewChat = () => {
@@ -321,7 +360,6 @@ export default function App() {
           {/* 1. Login Screen */}
           {currentScreen === 'login' && (
             <LoginScreen
-              onLogin={handleLogin}
               onAdminLoginClick={() => setCurrentScreen('admin-login')}
             />
           )}
@@ -354,7 +392,7 @@ export default function App() {
           )}
 
           {/* 4. Chat Workspace Screen */}
-          {currentScreen === 'chat' && (
+          {currentScreen === 'chat' && userSession && (
             <div className="flex h-screen w-full overflow-hidden">
               {/* Sidebar */}
               <Sidebar

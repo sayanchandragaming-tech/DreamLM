@@ -25,7 +25,6 @@ export interface UserSession {
 }
 
 const STORAGE_CHATS_KEY = 'dreamlm_user_chats';
-const STORAGE_USER_KEY = 'dreamlm_user_session';
 
 export function getStoredConversations(): Conversation[] {
   try {
@@ -37,7 +36,6 @@ export function getStoredConversations(): Conversation[] {
     return [];
   }
 }
-
 export function saveConversation(convo: Conversation): void {
   try {
     const existing = getStoredConversations();
@@ -61,27 +59,5 @@ export function deleteStoredConversation(id: string): Conversation[] {
     return updated;
   } catch {
     return [];
-  }
-}
-
-export function getUserSession(): UserSession | null {
-  try {
-    const raw = localStorage.getItem(STORAGE_USER_KEY);
-    if (!raw) return null;
-    return JSON.parse(raw);
-  } catch {
-    return null;
-  }
-}
-
-export function setUserSession(session: UserSession | null): void {
-  try {
-    if (session) {
-      localStorage.setItem(STORAGE_USER_KEY, JSON.stringify(session));
-    } else {
-      localStorage.removeItem(STORAGE_USER_KEY);
-    }
-  } catch {
-    // Gracefully handle storage errors
   }
 }
