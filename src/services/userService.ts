@@ -1,12 +1,10 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import { supabase } from './supabaseClient.ts';
 
 export type UserStatus = 'Pending' | 'Active' | 'Banned';
 
 export interface BetaUser {
   id: string;
+  authUserId?: string;
   username: string;
   email?: string;
   status: UserStatus;
@@ -19,251 +17,181 @@ export interface BetaUser {
   notes?: string;
 }
 
-const STORAGE_USERS_KEY = 'dreamlm_registered_users';
-
-// Seed initial users representing real administrators and beta researchers
-const INITIAL_USERS: BetaUser[] = [
-  {
-    id: 'user_sayan_01',
-    username: 'Sayan Chandra',
-    email: 'sayanchandra.gaming@gmail.com',
-    status: 'Active',
-    registeredAt: '2026-09-20 09:30',
-    lastActive: 'Just now',
-    role: 'Administrator',
-    notes: 'Co-Founder & Lead Engineer, Dream Circuit',
-  },
-  {
-    id: 'user_arindam_02',
-    username: 'Arindam Roy',
-    email: 'arindam.roy@dreamcircuit.internal',
-    status: 'Active',
-    registeredAt: '2026-09-20 09:30',
-    lastActive: '2026-09-26 11:15',
-    role: 'Administrator',
-    notes: 'Co-Founder & Research Lead, Dream Circuit',
-  },
-  {
-    id: 'user_researcher_03',
-    username: 'Dr. Evelyn Chen',
-    email: 'e.chen@princeton.edu',
-    status: 'Active',
-    registeredAt: '2026-09-24 14:22',
-    lastActive: '2026-09-26 10:45',
-    role: 'Researcher',
-    notes: 'Quantum decoherence & non-Markovian open systems',
-  },
-  {
-    id: 'user_pending_04',
-    username: 'Marcus Vance',
-    email: 'mvance@cern.ch',
-    status: 'Pending',
-    registeredAt: '2026-09-26 08:10',
-    lastActive: '2026-09-26 08:10',
-    role: 'Researcher',
-    notes: 'LHC phenomenological tensor simulation access request',
-  },
-];
-
-export function getRegisteredUsers(): BetaUser[] {
-  try {
-    const raw = localStorage.getItem(STORAGE_USERS_KEY);
-    if (!raw) {
-      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(INITIAL_USERS));
-      return INITIAL_USERS;
-    }
-    const parsed = JSON.parse(raw);
-    if (!Array.isArray(parsed) || parsed.length === 0) {
-      localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(INITIAL_USERS));
-      return INITIAL_USERS;
-    }
-    return parsed;
-  } catch {
-    return INITIAL_USERS;
-  }
+export interface AdminAuditEvent {
+  id: string;
+  actorUserId: string;
+  action: string;
+  targetUserId?: string;
+  metadata: Record<string, unknown>;
+  createdAt: string;
 }
 
-export function saveUsers(users: BetaUser[]): void {
-  try {
-    localStorage.setItem(STORAGE_USERS_KEY, JSON.stringify(users));
-  } catch {
-    // Graceful error handling
-  }
+export function getAuditEventSummary(event: AdminAuditEvent): string | undefined {
+  const record = event.metadata.new ?? event.metadata.old;
+  if (!record || typeof record !== 'object' || Array.isArray(record)) return undefined;
+  const userRecord = record as Record<string, unknown>;
+  const username = typeof userRecord.username === 'string' ? userRecord.username : undefined;
+  const reason = typeof userRecord.ban_reason === 'string' ? userRecord.ban_reason : undefined;
+  return [username, reason ? `Reason: ${reason}` : undefined].filter(Boolean).join(' · ') || undefined;
 }
 
-export function recordOrUpdateUser(
-  username: string,
-  role: 'Researcher' | 'Administrator' = 'Researcher'
-): { allowed: boolean; status: UserStatus; error?: string; user?: BetaUser } {
-  const users = getRegisteredUsers();
-  const cleanName = (username || '').trim().toLowerCase();
-  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString();
+interface BetaUserRow {
+  id: string;
+  auth_user_id: string | null;
+  username: string;
+  email: string | null;
+  status: UserStatus;
+  directory_role: 'Researcher' | 'Administrator';
+  notes: string | null;
+  created_at: string;
+  last_active_at: string;
+  ban_reason: string | null;
+  banned_at: string | null;
+  banned_by: string | null;
+}
 
-  const existing = users.find(
-    (u) =>
-      u.username.toLowerCase() === cleanName ||
-      (u.email && u.email.toLowerCase() === cleanName)
-  );
+interface AdminAuditEventRow {
+  id: string;
+  actor_id: string | null;
+  event_type: string;
+  target_user_id: string | null;
+  details: Record<string, unknown> | null;
+  created_at: string;
+}
 
-  if (existing) {
-    if (existing.status === 'Banned') {
-      return {
-        allowed: false,
-        status: 'Banned',
-        error: `Account suspended. Reason: ${existing.banReason || 'Access revoked by administrator.'}`,
-        user: existing,
-      };
-    }
-    existing.lastActive = now;
-    saveUsers(users);
-    return { allowed: true, status: existing.status, user: existing };
-  }
+function getSupabase() {
+  if (!supabase) throw new Error('Supabase is not configured.');
+  return supabase;
+}
 
-  // Create new active beta researcher
-  const newUser: BetaUser = {
-    id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    username: username.trim(),
-    status: 'Active',
-    registeredAt: now,
-    lastActive: now,
-    role,
+function mapBetaUser(row: BetaUserRow): BetaUser {
+  return {
+    id: row.id,
+    authUserId: row.auth_user_id || undefined,
+    username: row.username,
+    email: row.email || undefined,
+    status: row.status,
+    registeredAt: row.created_at,
+    lastActive: row.last_active_at,
+    role: row.directory_role,
+    banReason: row.ban_reason || undefined,
+    bannedAt: row.banned_at || undefined,
+    bannedBy: row.banned_by || undefined,
+    notes: row.notes || undefined,
   };
-  users.push(newUser);
-  saveUsers(users);
-  return { allowed: true, status: 'Active', user: newUser };
 }
 
-export function banUser(username: string, reason?: string, adminName: string = 'admin'): boolean {
-  const users = getRegisteredUsers();
-  const cleanName = (username || '').trim().toLowerCase();
-  const target = users.find(
-    (u) =>
-      u.username.toLowerCase() === cleanName ||
-      (u.email && u.email.toLowerCase() === cleanName)
-  );
+export async function getRegisteredUsers(): Promise<BetaUser[]> {
+  const { data, error } = await getSupabase()
+    .from('beta_users')
+    .select('id, auth_user_id, username, email, status, directory_role, notes, created_at, last_active_at, ban_reason, banned_at, banned_by')
+    .order('created_at', { ascending: false });
+  if (error) throw error;
+  return (data as BetaUserRow[]).map(mapBetaUser);
+}
 
-  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString();
+export async function getAdminAuditEvents(): Promise<AdminAuditEvent[]> {
+  const { data, error } = await getSupabase()
+    .from('admin_audit_events')
+    .select('id, actor_id, event_type, target_user_id, details, created_at')
+    .order('created_at', { ascending: false })
+    .limit(200);
+  if (error) throw error;
+  return (data as AdminAuditEventRow[]).map((row) => ({
+    id: row.id,
+    actorUserId: row.actor_id || 'Unknown actor',
+    action: row.event_type,
+    targetUserId: row.target_user_id || undefined,
+    metadata: row.details || {},
+    createdAt: row.created_at,
+  }));
+}
 
-  if (target) {
-    target.status = 'Banned';
-    target.banReason = reason?.trim() || 'Access revoked by administrator.';
-    target.bannedAt = now;
-    target.bannedBy = adminName;
-    saveUsers(users);
-    return true;
-  }
+export async function recordOrUpdateUser(
+  _username: string,
+  _role: 'Researcher' | 'Administrator' = 'Researcher',
+): Promise<{ allowed: boolean; status: UserStatus; error?: string; user?: BetaUser }> {
+  const { data, error } = await getSupabase().rpc('ensure_current_beta_user');
+  if (error) throw error;
 
-  // If user wasn't registered yet, record them directly as Banned
-  const newUser: BetaUser = {
-    id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    username: username.trim(),
-    status: 'Banned',
-    registeredAt: now,
-    lastActive: now,
-    role: 'Researcher',
-    banReason: reason?.trim() || 'Access revoked by administrator.',
-    bannedAt: now,
-    bannedBy: adminName,
+  const row = (Array.isArray(data) ? data[0] : data) as BetaUserRow | null;
+  if (!row) throw new Error('Supabase did not return the authenticated beta user.');
+  const user = mapBetaUser(row);
+  return {
+    allowed: user.status !== 'Banned',
+    status: user.status,
+    error: user.status === 'Banned'
+      ? `Account suspended. Reason: ${user.banReason || 'Access revoked by an administrator.'}`
+      : undefined,
+    user,
   };
-  users.push(newUser);
-  saveUsers(users);
-  return true;
 }
 
-export function unbanUser(username: string): boolean {
-  const users = getRegisteredUsers();
-  const cleanName = (username || '').trim().toLowerCase();
-  const target = users.find(
-    (u) =>
-      u.username.toLowerCase() === cleanName ||
-      (u.email && u.email.toLowerCase() === cleanName)
-  );
-
-  if (target) {
-    target.status = 'Active';
-    delete target.banReason;
-    delete target.bannedAt;
-    delete target.bannedBy;
-    saveUsers(users);
-    return true;
-  }
-  return false;
+export async function banUser(userId: string, reason?: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('beta_users')
+    .update({ status: 'Banned', ban_reason: reason?.trim() || 'Access revoked by an administrator.' })
+    .eq('id', userId)
+    .select('id')
+    .single();
+  if (error) throw error;
 }
 
-export function setUserStatus(username: string, status: UserStatus, reason?: string): boolean {
-  if (status === 'Banned') {
-    return banUser(username, reason);
-  }
-  if (status === 'Active') {
-    return unbanUser(username);
-  }
-  // Pending
-  const users = getRegisteredUsers();
-  const cleanName = (username || '').trim().toLowerCase();
-  const target = users.find(
-    (u) =>
-      u.username.toLowerCase() === cleanName ||
-      (u.email && u.email.toLowerCase() === cleanName)
-  );
-  if (target) {
-    target.status = 'Pending';
-    delete target.banReason;
-    saveUsers(users);
-    return true;
-  }
-  return false;
+export async function unbanUser(userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('beta_users')
+    .update({ status: 'Active' })
+    .eq('id', userId)
+    .select('id')
+    .single();
+  if (error) throw error;
 }
 
-export function isUserBanned(username: string): boolean {
-  if (!username) return false;
-  const users = getRegisteredUsers();
-  const cleanName = username.trim().toLowerCase();
-  const target = users.find(
-    (u) =>
-      u.username.toLowerCase() === cleanName ||
-      (u.email && u.email.toLowerCase() === cleanName)
-  );
-  return target?.status === 'Banned';
+export async function setUserStatus(
+  userId: string,
+  status: UserStatus,
+  reason?: string,
+): Promise<void> {
+  const update = status === 'Banned'
+    ? { status, ban_reason: reason?.trim() || 'Access revoked by an administrator.' }
+    : { status };
+  const { error } = await getSupabase()
+    .from('beta_users')
+    .update(update)
+    .eq('id', userId)
+    .select('id')
+    .single();
+  if (error) throw error;
 }
 
-export function getUserDetails(username: string): BetaUser | undefined {
-  if (!username) return undefined;
-  const users = getRegisteredUsers();
-  const cleanName = username.trim().toLowerCase();
-  return users.find(
-    (u) =>
-      u.username.toLowerCase() === cleanName ||
-      (u.email && u.email.toLowerCase() === cleanName)
-  );
-}
-
-export function addBetaUser(user: {
+export async function addBetaUser(user: {
   username: string;
   email?: string;
   role?: 'Researcher' | 'Administrator';
   status?: UserStatus;
   notes?: string;
-}): BetaUser {
-  const users = getRegisteredUsers();
-  const now = new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' ' + new Date().toLocaleDateString();
-  const newUser: BetaUser = {
-    id: `user_${Date.now()}_${Math.random().toString(36).slice(2, 6)}`,
-    username: user.username.trim(),
-    email: user.email?.trim(),
-    role: user.role || 'Researcher',
-    status: user.status || 'Active',
-    registeredAt: now,
-    lastActive: now,
-    notes: user.notes?.trim(),
-  };
-  users.unshift(newUser);
-  saveUsers(users);
-  return newUser;
+}): Promise<BetaUser> {
+  const { data, error } = await getSupabase()
+    .from('beta_users')
+    .insert({
+      username: user.username.trim(),
+      email: user.email?.trim() || null,
+      directory_role: user.role || 'Researcher',
+      status: user.status || 'Active',
+      notes: user.notes?.trim() || null,
+    })
+    .select('id, auth_user_id, username, email, status, directory_role, notes, created_at, last_active_at, ban_reason, banned_at, banned_by')
+    .single();
+  if (error) throw error;
+  return mapBetaUser(data as BetaUserRow);
 }
 
-export function deleteBetaUser(userId: string): boolean {
-  const users = getRegisteredUsers();
-  const filtered = users.filter((u) => u.id !== userId && u.username !== userId);
-  saveUsers(filtered);
-  return true;
+export async function deleteBetaUser(userId: string): Promise<void> {
+  const { error } = await getSupabase()
+    .from('beta_users')
+    .delete()
+    .eq('id', userId)
+    .select('id')
+    .single();
+  if (error) throw error;
 }

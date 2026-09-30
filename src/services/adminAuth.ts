@@ -1,101 +1,33 @@
-/**
- * @license
- * SPDX-License-Identifier: Apache-2.0
- */
+import type { User } from '@supabase/supabase-js';
+import { supabase } from './supabaseClient.ts';
 
-// Authorized credentials for Dream Circuit Private Beta Enclave:
-// Default: admin / admin
-// Alternative: admin / dreamcircuit2026
-// Direct testing usernames: sayanchandra, arindam, dreamcircuit
+export function hasAdminRole(user: User | null): boolean {
+  const appMetadata = user?.app_metadata;
+  return appMetadata?.role === 'admin' ||
+    (Array.isArray(appMetadata?.roles) && appMetadata.roles.includes('admin'));
+}
 
-const VALID_USERNAMES = [
-  'admin',
-  'administrator',
-  'sayanchandra',
-  'sayanchandra.gaming@gmail.com',
-  'arindam',
-  'dreamcircuit',
-  'operator',
-];
-
-const VALID_PASSWORDS = [
-  'admin',
-  'admin123',
-  'dreamcircuit2026',
-  'dreamcircuit',
-  'dreamlm',
-  'dreamlm2026',
-  'sayanchandra',
-  'sayanchandra2026',
-  'password',
-];
-
-export async function verifyAdminCredentials(
-  username: string,
-  password: string
+export async function signInAsAdmin(
+  email: string,
+  password: string,
 ): Promise<{ success: boolean; error?: string }> {
-  const trimmedUser = (username || '').trim().toLowerCase();
-  const trimmedPass = (password || '').trim();
-
-  if (!trimmedUser || !trimmedPass) {
-    return {
-      success: false,
-      error: 'Please enter both administrator username and password.',
-    };
+  if (!supabase) {
+    return { success: false, error: 'Authentication is not configured.' };
   }
 
-  // Check if username and password match any of the authorized administrator credentials
-  const isAuthorizedUser = VALID_USERNAMES.includes(trimmedUser);
-  const isAuthorizedPassword = VALID_PASSWORDS.includes(trimmedPass.toLowerCase()) || trimmedPass === 'admin' || trimmedPass === 'dreamcircuit2026';
+  const { data, error } = await supabase.auth.signInWithPassword({
+    email: email.trim(),
+    password,
+  });
 
-  if (isAuthorizedUser && isAuthorizedPassword) {
-    try {
-      sessionStorage.setItem('dreamlm_admin_token', 'enclave_session_active');
-      sessionStorage.setItem('dreamlm_admin_user', trimmedUser);
-    } catch {
-      // Ignore sessionStorage errors
-    }
-    return { success: true };
+  if (error) {
+    console.error('Supabase administrator sign-in failed:', error);
+    return { success: false, error: error.message };
   }
 
-  // Also support universal admin fallback: username 'admin' with 'admin' or 'dreamcircuit2026'
-  if (trimmedUser === 'admin' && (trimmedPass === 'admin' || trimmedPass === 'dreamcircuit2026')) {
-    try {
-      sessionStorage.setItem('dreamlm_admin_token', 'enclave_session_active');
-      sessionStorage.setItem('dreamlm_admin_user', 'admin');
-    } catch {
-      // Ignore
-    }
-    return { success: true };
+  if (!hasAdminRole(data.user)) {
+    return { success: false, error: 'This account is not authorized for administrator access.' };
   }
 
-  return {
-    success: false,
-    error: 'Invalid administrator credentials. Hint: use admin / admin or admin / dreamcircuit2026',
-  };
-}
-
-export function isAdminAuthenticated(): boolean {
-  try {
-    return sessionStorage.getItem('dreamlm_admin_token') === 'enclave_session_active';
-  } catch {
-    return false;
-  }
-}
-
-export function getActiveAdminUsername(): string {
-  try {
-    return sessionStorage.getItem('dreamlm_admin_user') || 'admin';
-  } catch {
-    return 'admin';
-  }
-}
-
-export function clearAdminSession(): void {
-  try {
-    sessionStorage.removeItem('dreamlm_admin_token');
-    sessionStorage.removeItem('dreamlm_admin_user');
-  } catch {
-    // Graceful cleanup
-  }
+  return { success: true };
 }

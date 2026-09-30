@@ -1,0 +1,2 @@
+-- Superseded draft; do not apply this migration.
+-- Use 20260930120000_reconcile_live_admin_audit.sql for the live audit schema.

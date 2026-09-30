@@ -54,7 +54,11 @@ export const LoginScreen: React.FC<LoginScreenProps> = ({
     try {
       const { error } = await supabase.auth.signInWithOAuth({
         provider: 'google',
-        options: { redirectTo: window.location.origin },
+        options: {
+          redirectTo: import.meta.env.PROD
+            ? 'https://dreamlm.antideploy.app'
+            : window.location.origin,
+        },
       });
       if (error) throw error;
     } catch (error) {

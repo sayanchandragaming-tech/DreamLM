@@ -4,41 +4,41 @@
  */
 
 import React, { useState, useEffect } from 'react';
-import { Conversation, UserSession } from '../services/chatStorage.ts';
+import { Conversation } from '../services/chatStorage.ts';
 import { DREAMLM_ADMIN_LOGO_URL } from './BrandIcons.tsx';
-import { clearAdminSession } from '../services/adminAuth.ts';
 import {
   BetaUser,
   UserStatus,
   getRegisteredUsers,
+  getAdminAuditEvents,
+  getAuditEventSummary,
   banUser,
   unbanUser,
   setUserStatus,
   addBetaUser,
   deleteBetaUser,
+  AdminAuditEvent,
 } from '../services/userService.ts';
 
 interface AdminViewProps {
   onBackToWorkspace: () => void;
   conversations: Conversation[];
-  currentUser: UserSession | null;
   onToast: (msg: string) => void;
 }
 
 export const AdminView: React.FC<AdminViewProps> = ({
   onBackToWorkspace,
   conversations,
-  currentUser,
   onToast,
 }) => {
   const [currentTab, setCurrentTab] = useState<'overview' | 'users' | 'conversations' | 'system-control' | 'audit'>('overview');
   const [liveClock, setLiveClock] = useState('00:00:00 UTC');
-  const [auditLog, setAuditLog] = useState<
-    Array<{ id: string; time: string; action: string; actor: string }>
-  >([]);
+  const [auditLog, setAuditLog] = useState<AdminAuditEvent[]>([]);
+  const [isLoadingAdminData, setIsLoadingAdminData] = useState(true);
+  const [adminDataError, setAdminDataError] = useState<string | null>(null);
 
   // Users Management State
-  const [users, setUsers] = useState<BetaUser[]>(() => getRegisteredUsers());
+  const [users, setUsers] = useState<BetaUser[]>([]);
   const [userSearch, setUserSearch] = useState('');
   const [userFilterStatus, setUserFilterStatus] = useState<'all' | UserStatus>('all');
   const [selectedUserDetail, setSelectedUserDetail] = useState<BetaUser | null>(null);
@@ -54,9 +54,22 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [newUserRole, setNewUserRole] = useState<'Researcher' | 'Administrator'>('Researcher');
   const [newUserStatus, setNewUserStatus] = useState<UserStatus>('Active');
 
-  const refreshUsers = () => {
-    const list = getRegisteredUsers();
-    setUsers([...list]);
+  const refreshAdminData = async () => {
+    setIsLoadingAdminData(true);
+    try {
+      const [userList, auditEvents] = await Promise.all([
+        getRegisteredUsers(),
+        getAdminAuditEvents(),
+      ]);
+      setUsers(userList);
+      setAuditLog(auditEvents);
+      setAdminDataError(null);
+    } catch (error) {
+      console.error('Failed to load protected admin data:', error);
+      setAdminDataError(error instanceof Error ? error.message : 'Protected admin data could not be loaded.');
+    } finally {
+      setIsLoadingAdminData(false);
+    }
   };
 
   useEffect(() => {
@@ -69,100 +82,99 @@ export const AdminView: React.FC<AdminViewProps> = ({
     };
     updateTime();
     const interval = setInterval(updateTime, 1000);
-
-    // Initial real audit entry
-    setAuditLog([
-      {
-        id: '1',
-        time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }) + ' UTC',
-        action: 'ADMIN_SESSION_AUTHENTICATED',
-        actor: currentUser?.username || 'admin',
-      },
-    ]);
-
+    void refreshAdminData();
     return () => clearInterval(interval);
-  }, [currentUser]);
-
-  const addAuditEntry = (action: string) => {
-    const entry = {
-      id: String(Date.now()),
-      time: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit', second: '2-digit' }) + ' UTC',
-      action,
-      actor: currentUser?.username || 'admin',
-    };
-    setAuditLog((prev) => [entry, ...prev]);
-  };
+  }, []);
 
   const handleLogout = () => {
-    clearAdminSession();
-    onToast('Administrator session closed');
+    onToast('Returned to workspace');
     onBackToWorkspace();
   };
 
-  const handleExecuteBan = () => {
+  const handleExecuteBan = async () => {
     if (!userToBan) return;
-    banUser(userToBan.username, banReasonInput, currentUser?.username || 'admin');
-    refreshUsers();
-    addAuditEntry(`USER_BANNED: ${userToBan.username} (${banReasonInput})`);
-    onToast(`User "${userToBan.username}" has been BANNED from private beta`);
-    setUserToBan(null);
-    setBanReasonInput('Violation of beta research policy');
-    if (selectedUserDetail?.username === userToBan.username) {
-      setSelectedUserDetail({ ...userToBan, status: 'Banned', banReason: banReasonInput });
+    try {
+      await banUser(userToBan.id, banReasonInput);
+      await refreshAdminData();
+      onToast(`User "${userToBan.username}" has been marked as banned`);
+      setUserToBan(null);
+      setBanReasonInput('Violation of beta research policy');
+      if (selectedUserDetail?.id === userToBan.id) {
+        setSelectedUserDetail({ ...userToBan, status: 'Banned', banReason: banReasonInput });
+      }
+    } catch (error) {
+      console.error('Failed to ban beta user:', error);
+      onToast('User ban could not be saved. Check administrator access and try again.');
     }
   };
 
-  const handleExecuteUnban = (user: BetaUser) => {
-    unbanUser(user.username);
-    refreshUsers();
-    addAuditEntry(`USER_UNBANNED: ${user.username}`);
-    onToast(`User "${user.username}" restored to Active`);
-    if (selectedUserDetail?.username === user.username) {
-      setSelectedUserDetail({ ...user, status: 'Active', banReason: undefined });
+  const handleExecuteUnban = async (user: BetaUser) => {
+    try {
+      await unbanUser(user.id);
+      await refreshAdminData();
+      onToast(`User "${user.username}" restored to Active`);
+      if (selectedUserDetail?.id === user.id) {
+        setSelectedUserDetail({ ...user, status: 'Active', banReason: undefined, bannedAt: undefined, bannedBy: undefined });
+      }
+    } catch (error) {
+      console.error('Failed to unban beta user:', error);
+      onToast('User status could not be saved. Check administrator access and try again.');
     }
   };
 
-  const handleStatusChange = (username: string, newStatus: UserStatus) => {
+  const handleStatusChange = async (userId: string, newStatus: UserStatus) => {
     if (newStatus === 'Banned') {
-      const u = users.find((x) => x.username === username);
+      const u = users.find((x) => x.id === userId);
       if (u) {
         setUserToBan(u);
         return;
       }
     }
-    setUserStatus(username, newStatus);
-    refreshUsers();
-    addAuditEntry(`USER_STATUS_CHANGE: ${username} -> ${newStatus}`);
-    onToast(`Status updated to ${newStatus}`);
+    try {
+      await setUserStatus(userId, newStatus);
+      await refreshAdminData();
+      onToast(`Status updated to ${newStatus}`);
+    } catch (error) {
+      console.error('Failed to update beta user status:', error);
+      onToast('User status could not be saved. Check administrator access and try again.');
+    }
   };
 
-  const handleCreateUser = (e: React.FormEvent) => {
+  const handleCreateUser = async (e: React.FormEvent) => {
     e.preventDefault();
     if (!newUsername.trim()) return;
 
-    addBetaUser({
-      username: newUsername.trim(),
-      email: newUserEmail.trim() || undefined,
-      role: newUserRole,
-      status: newUserStatus,
-    });
-    refreshUsers();
-    addAuditEntry(`USER_REGISTERED: ${newUsername.trim()}`);
-    onToast(`User "${newUsername.trim()}" added to Beta registry`);
-    setNewUsername('');
-    setNewUserEmail('');
-    setIsAddUserModalOpen(false);
+    try {
+      await addBetaUser({
+        username: newUsername.trim(),
+        email: newUserEmail.trim() || undefined,
+        role: newUserRole,
+        status: newUserStatus,
+      });
+      await refreshAdminData();
+      onToast(`User "${newUsername.trim()}" added to Beta registry`);
+      setNewUsername('');
+      setNewUserEmail('');
+      setIsAddUserModalOpen(false);
+    } catch (error) {
+      console.error('Failed to add beta user:', error);
+      onToast('Beta user could not be added. Check administrator access and try again.');
+    }
   };
 
-  const handleDeleteUserRecord = (userId: string, username: string) => {
+  const handleDeleteUserRecord = async (userId: string, username: string) => {
     if (confirm(`Remove "${username}" from the beta user directory?`)) {
-      deleteBetaUser(userId);
-      refreshUsers();
-      if (selectedUserDetail?.id === userId) {
-        setSelectedUserDetail(null);
+      try {
+        await deleteBetaUser(userId);
+        await refreshAdminData();
+        if (selectedUserDetail?.id === userId) {
+          setSelectedUserDetail(null);
+        }
+        onToast(`User "${username}" removed`);
+      } catch (error) {
+        console.error('Failed to delete beta user:', error);
+        onToast('Beta user could not be deleted. Check administrator access and try again.');
       }
-      addAuditEntry(`USER_DELETED: ${username}`);
-      onToast(`User "${username}" removed`);
     }
   };
 
@@ -302,6 +314,17 @@ export const AdminView: React.FC<AdminViewProps> = ({
       <div className="pl-64 pt-16">
         <main className="w-full min-h-screen bg-surface p-space-md sm:p-space-xl">
           <div className="max-w-5xl mx-auto space-y-space-lg">
+            {adminDataError && (
+              <div className="p-3 rounded-lg bg-error-container/30 border border-error/30 text-sm text-error" role="alert">
+                {adminDataError}
+              </div>
+            )}
+            {isLoadingAdminData && (
+              <div className="text-xs text-on-surface-variant" role="status">
+                Loading protected admin data...
+              </div>
+            )}
+
             {/* Header Telemetry */}
             <section className="bg-surface-container-lowest p-space-md sm:p-space-lg rounded-xl shadow-xs border border-outline-variant/30 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div>
@@ -556,7 +579,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                       </span>
                     </div>
                     <span className="font-code-notation text-[11px] text-outline">
-                      Real-time events
+                      Latest persisted events
                     </span>
                   </div>
 
@@ -564,13 +587,21 @@ export const AdminView: React.FC<AdminViewProps> = ({
                     {auditLog.map((log) => (
                       <div
                         key={log.id}
-                        className="p-2.5 rounded bg-surface-container-low flex items-center justify-between border border-outline-variant/20"
+                        className="p-2.5 rounded bg-surface-container-low border border-outline-variant/20"
                       >
-                        <div className="flex items-center gap-2">
-                          <span className="text-outline">{log.time}</span>
-                          <strong className="text-primary font-semibold">[{log.action}]</strong>
+                        <div className="flex items-center justify-between gap-2">
+                          <div className="flex items-center gap-2">
+                            <span className="text-outline">{new Date(log.createdAt).toLocaleString()}</span>
+                            <strong className="text-primary font-semibold">[{log.action}]</strong>
+                          </div>
+                          <span className="text-secondary font-medium">{log.actorUserId}</span>
                         </div>
-                        <span className="text-secondary font-medium">{log.actor}</span>
+                      {(log.targetUserId || getAuditEventSummary(log)) && (
+                        <div className="mt-1 text-outline">
+                          {log.targetUserId && <span>Target: {log.targetUserId}</span>}
+                          {getAuditEventSummary(log) && <span>{log.targetUserId ? ' · ' : ''}{getAuditEventSummary(log)}</span>}
+                        </div>
+                      )}
                       </div>
                     ))}
                   </div>
@@ -720,7 +751,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
                                   {/* Status Selector */}
                                   <select
                                     value={u.status}
-                                    onChange={(e) => handleStatusChange(u.username, e.target.value as UserStatus)}
+                                    onChange={(e) => void handleStatusChange(u.id, e.target.value as UserStatus)}
                                     className="px-2 py-1 rounded bg-surface-container-low text-xs border border-outline-variant/30 text-on-surface focus:outline-none"
                                   >
                                     <option value="Active">Active</option>
@@ -818,13 +849,19 @@ export const AdminView: React.FC<AdminViewProps> = ({
                   {auditLog.map((log) => (
                     <div
                       key={log.id}
-                      className="p-2.5 rounded bg-surface-container-low flex items-center justify-between border border-outline-variant/20"
+                        className="p-2.5 rounded bg-surface-container-low border border-outline-variant/20"
                     >
-                      <div className="flex items-center gap-2">
-                        <span className="text-outline">{log.time}</span>
+                        <div className="flex items-center justify-between gap-2">
+                        <span className="text-outline">{new Date(log.createdAt).toLocaleString()}</span>
                         <strong className="text-primary font-semibold">[{log.action}]</strong>
+                          <span className="text-secondary font-medium">{log.actorUserId}</span>
                       </div>
-                      <span className="text-secondary font-medium">{log.actor}</span>
+                        {(log.targetUserId || getAuditEventSummary(log)) && (
+                          <div className="mt-1 text-outline">
+                            {log.targetUserId && <span>Target: {log.targetUserId}</span>}
+                            {getAuditEventSummary(log) && <span>{log.targetUserId ? ' · ' : ''}{getAuditEventSummary(log)}</span>}
+                          </div>
+                        )}
                     </div>
                   ))}
                 </div>

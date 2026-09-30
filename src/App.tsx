@@ -13,8 +13,8 @@ import {
   saveConversation,
   deleteStoredConversation,
 } from './services/chatStorage.ts';
-import { isAdminAuthenticated } from './services/adminAuth.ts';
-import { isUserBanned, getUserDetails, recordOrUpdateUser } from './services/userService.ts';
+import { hasAdminRole } from './services/adminAuth.ts';
+import { recordOrUpdateUser } from './services/userService.ts';
 import { supabase } from './services/supabaseClient.ts';
 import { Sidebar } from './components/Sidebar.tsx';
 import { ChatWorkspace } from './components/ChatWorkspace.tsx';
@@ -67,6 +67,9 @@ export default function App() {
   }, [currentTheme]);
 
   const [userSession, setCurrentUserSession] = useState<UserSession | null>(null);
+  const [isAdminUser, setIsAdminUser] = useState(false);
+  const [isCurrentActiveUserBanned, setIsCurrentActiveUserBanned] = useState(false);
+  const [currentUserBanReason, setCurrentUserBanReason] = useState<string | undefined>();
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('login');
 
@@ -90,10 +93,13 @@ export default function App() {
     }
 
     let isMounted = true;
-    const applyAuthSession = (session: Session | null) => {
+    let authRevision = 0;
+    const applyAuthSession = async (session: Session | null) => {
+      const revision = ++authRevision;
       if (!isMounted) return;
 
       if (session?.user) {
+        setIsAdminUser(hasAdminRole(session.user));
         const email = session.user.email?.trim();
         const metadata = session.user.user_metadata;
         const metadataName = typeof metadata.full_name === 'string'
@@ -102,35 +108,52 @@ export default function App() {
             ? metadata.name
             : undefined;
         const identity = email || metadataName || session.user.id;
-        const trackedUser = recordOrUpdateUser(identity, 'Researcher');
-        const username = trackedUser.user?.username || metadataName || email || 'Researcher';
+        const username = metadataName || email || 'Researcher';
 
         setCurrentUserSession({
           username,
           isAuthenticated: true,
           loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         });
-        setCurrentScreen('chat');
-      } else {
-        setCurrentUserSession(null);
-        setCurrentScreen('login');
-      }
+        setCurrentScreen((screen) => screen === 'admin-login' ? screen : 'chat');
+        setIsAuthLoading(false);
 
-      setIsAuthLoading(false);
+        try {
+          const trackedUser = await recordOrUpdateUser(identity);
+          if (!isMounted || revision !== authRevision) return;
+          setCurrentUserSession((current) => current
+            ? { ...current, username: trackedUser.user?.username || current.username }
+            : current);
+          setIsCurrentActiveUserBanned(trackedUser.status === 'Banned');
+          setCurrentUserBanReason(trackedUser.user?.banReason);
+        } catch (error) {
+          console.error('Beta user status lookup failed:', error);
+          if (!isMounted || revision !== authRevision) return;
+          setIsCurrentActiveUserBanned(false);
+          setCurrentUserBanReason(undefined);
+        }
+      } else {
+        setIsAdminUser(false);
+        setCurrentUserSession(null);
+        setIsCurrentActiveUserBanned(false);
+        setCurrentUserBanReason(undefined);
+        setCurrentScreen('login');
+        setIsAuthLoading(false);
+      }
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      applyAuthSession(session);
+      void applyAuthSession(session);
     });
 
     void supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) throw error;
-        applyAuthSession(data.session);
+        return applyAuthSession(data.session);
       })
       .catch((error: unknown) => {
         console.error('Supabase session lookup failed:', error);
-        applyAuthSession(null);
+        void applyAuthSession(null);
       });
 
     return () => {
@@ -144,6 +167,18 @@ export default function App() {
       setCurrentScreen('login');
     }
   }, [currentScreen, isAuthLoading, userSession]);
+
+  useEffect(() => {
+    if (currentScreen === 'admin-panel' && (!userSession || !isAdminUser)) {
+      setCurrentScreen(userSession ? 'admin-login' : 'login');
+    }
+  }, [currentScreen, isAdminUser, userSession]);
+
+  useEffect(() => {
+    if (currentScreen === 'admin-login' && userSession && isAdminUser) {
+      setCurrentScreen('admin-panel');
+    }
+  }, [currentScreen, isAdminUser, userSession]);
 
   const appendAssistantMessage = (
     conversationId: string,
@@ -325,13 +360,6 @@ export default function App() {
       .finally(() => setIsThinking(false));
   };
 
-  // Check if current user is banned
-  const isCurrentActiveUserBanned =
-    userSession?.username && isUserBanned(userSession.username);
-  const userBanDetails = userSession?.username
-    ? getUserDetails(userSession.username)
-    : undefined;
-
   return (
     <div className="min-h-screen bg-surface font-body-md text-on-surface antialiased selection:bg-secondary-fixed selection:text-primary">
       {/* Toast Notification */}
@@ -352,7 +380,7 @@ export default function App() {
       {isCurrentActiveUserBanned && currentScreen === 'chat' ? (
         <BannedScreen
           username={userSession?.username || 'User'}
-          reason={userBanDetails?.banReason}
+          reason={currentUserBanReason}
           onSignOut={handleSignOut}
         />
       ) : (
@@ -368,7 +396,7 @@ export default function App() {
           {currentScreen === 'admin-login' && (
             <AdminLoginScreen
               onSuccess={() => {
-                showToast('Administrator credentials verified');
+                showToast('Administrator access verified');
                 setCurrentScreen('admin-panel');
               }}
               onBack={() => {
@@ -383,12 +411,13 @@ export default function App() {
 
           {/* 3. Admin Panel Screen */}
           {currentScreen === 'admin-panel' && (
+            userSession && isAdminUser ? (
             <AdminView
               onBackToWorkspace={() => setCurrentScreen('chat')}
               conversations={conversations}
-              currentUser={userSession}
               onToast={showToast}
             />
+            ) : null
           )}
 
           {/* 4. Chat Workspace Screen */}
@@ -436,7 +465,7 @@ export default function App() {
                 }}
                 onNavigateToAdmin={() => {
                   setIsAccountPanelOpen(false);
-                  if (isAdminAuthenticated()) {
+                  if (isAdminUser) {
                     setCurrentScreen('admin-panel');
                   } else {
                     setCurrentScreen('admin-login');

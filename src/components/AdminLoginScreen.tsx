@@ -5,7 +5,7 @@
 
 import React, { useState } from 'react';
 import { DREAMLM_ADMIN_LOGO_URL } from './BrandIcons.tsx';
-import { verifyAdminCredentials } from '../services/adminAuth.ts';
+import { signInAsAdmin } from '../services/adminAuth.ts';
 
 interface AdminLoginScreenProps {
   onSuccess: () => void;
@@ -16,8 +16,8 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
   onSuccess,
   onBack,
 }) => {
-  const [username, setUsername] = useState('admin');
-  const [password, setPassword] = useState('admin');
+  const [email, setEmail] = useState('');
+  const [password, setPassword] = useState('');
   const [errorMessage, setErrorMessage] = useState<string | null>(null);
   const [isVerifying, setIsVerifying] = useState(false);
   const [showPassword, setShowPassword] = useState(false);
@@ -27,20 +27,19 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
     setErrorMessage(null);
     setIsVerifying(true);
 
-    const result = await verifyAdminCredentials(username, password);
-    setIsVerifying(false);
-
-    if (result.success) {
-      onSuccess();
-    } else {
-      setErrorMessage(result.error || 'Invalid administrator credentials.');
+    try {
+      const result = await signInAsAdmin(email, password);
+      if (result.success) {
+        onSuccess();
+      } else {
+        setErrorMessage(result.error || 'Administrator access could not be verified.');
+      }
+    } catch (error) {
+      console.error('Administrator access verification failed:', error);
+      setErrorMessage('Administrator access could not be verified. Please try again.');
+    } finally {
+      setIsVerifying(false);
     }
-  };
-
-  const handleFillDemo = () => {
-    setUsername('admin');
-    setPassword('admin');
-    setErrorMessage(null);
   };
 
   return (
@@ -96,24 +95,6 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
             </p>
           </div>
 
-          {/* Credential Helper Box */}
-          <div className="mt-4 p-3 rounded-lg bg-secondary-fixed/50 border border-secondary/20 flex flex-col sm:flex-row sm:items-center justify-between gap-2 text-xs">
-            <div className="flex items-center gap-2 text-primary font-medium">
-              <span className="material-symbols-outlined text-sm text-secondary">vpn_key</span>
-              <span>
-                Authorized credentials: <strong className="font-code-notation">admin</strong> / <strong className="font-code-notation">admin</strong>
-              </span>
-            </div>
-            <button
-              type="button"
-              onClick={handleFillDemo}
-              className="text-[11px] font-semibold text-secondary hover:text-primary underline flex items-center gap-1 self-start sm:self-auto"
-            >
-              <span>Autofill</span>
-              <span className="material-symbols-outlined text-[12px]">auto_fix_high</span>
-            </button>
-          </div>
-
           {/* Error Message */}
           {errorMessage && (
             <div className="mt-4 p-3 rounded-lg bg-error-container/30 border border-error/20 flex items-center gap-2 text-xs text-error font-medium animate-in fade-in duration-150">
@@ -124,27 +105,27 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
 
           {/* Form */}
           <form onSubmit={handleSubmit} className="mt-space-md flex flex-col space-y-space-md">
-            {/* Admin Username */}
+            {/* Admin Email */}
             <div className="flex flex-col space-y-1">
               <label
                 className="font-label-md text-label-md text-on-surface font-semibold"
-                htmlFor="admin-username"
+                htmlFor="admin-email"
               >
-                Admin Username
+                Admin Email
               </label>
               <div className="relative flex items-center">
                 <div className="absolute left-3.5 text-on-surface-variant pointer-events-none flex items-center">
                   <span className="material-symbols-outlined text-base">badge</span>
                 </div>
                 <input
-                  id="admin-username"
-                  value={username}
-                  onChange={(e) => setUsername(e.target.value)}
+                  id="admin-email"
+                  value={email}
+                  onChange={(e) => setEmail(e.target.value)}
                   className="w-full pl-10 pr-3.5 py-2.5 bg-surface-container-lowest text-on-surface font-body-md text-body-md placeholder:text-outline/60 rounded-lg transition-colors border border-outline-variant/30 focus:outline-none focus:bg-surface-container-low focus:ring-1 focus:ring-primary font-code-notation"
-                  placeholder="Enter administrator username (e.g. admin)"
+                  placeholder="Enter administrator email"
                   autoFocus
                   required
-                  type="text"
+                  type="email"
                 />
               </div>
             </div>
@@ -166,7 +147,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                   value={password}
                   onChange={(e) => setPassword(e.target.value)}
                   className="w-full pl-10 pr-10 py-2.5 bg-surface-container-lowest text-on-surface font-body-md text-body-md placeholder:text-outline/60 rounded-lg transition-colors border border-outline-variant/30 focus:outline-none focus:bg-surface-container-low focus:ring-1 focus:ring-primary font-code-notation"
-                  placeholder="Enter administrator password (e.g. admin)"
+                  placeholder="Enter administrator password"
                   required
                   type={showPassword ? 'text' : 'password'}
                 />
@@ -195,7 +176,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
                     <span className="material-symbols-outlined text-base animate-spin">
                       progress_activity
                     </span>
-                    <span>Validating Credentials...</span>
+                    <span>Verifying Access...</span>
                   </>
                 ) : (
                   <>
@@ -214,7 +195,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
               info
             </span>
             <p className="font-body-sm text-body-sm text-on-surface-variant leading-relaxed text-xs">
-              Authorized Dream Circuit administrators only. Access attempts are recorded for system audit and security verification.
+              Access requires a Supabase account with administrator authorization.
             </p>
           </div>
         </div>
@@ -222,7 +203,7 @@ export const AdminLoginScreen: React.FC<AdminLoginScreenProps> = ({
         {/* Footer */}
         <div className="bg-surface-container px-space-lg py-2.5 flex items-center justify-between text-[11px] font-code-notation text-outline border-t border-outline-variant/20">
           <span>Private Beta Security Enclave</span>
-          <span>Zero-Trust Protocol</span>
+          <span>Supabase Admin Role</span>
         </div>
       </div>
     </div>
