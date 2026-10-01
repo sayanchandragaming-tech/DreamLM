@@ -28,8 +28,17 @@ import { AdminLoginScreen } from './components/AdminLoginScreen.tsx';
 import { AccountPanel } from './components/AccountPanel.tsx';
 import { BannedScreen } from './components/BannedScreen.tsx';
 import { useTheme, applyThemeToDOM } from './services/themeService.ts';
+
+class DreamLMAuthenticationError extends Error {}
+
 async function requestDreamLMResponse(message: string, sessionId: string): Promise<string> {
   try {
+    if (!supabase) throw new DreamLMAuthenticationError('Supabase is not configured.');
+    const { data: sessionData, error: sessionError } = await supabase.auth.getSession();
+    if (sessionError) throw sessionError;
+    const accessToken = sessionData.session?.access_token;
+    if (!accessToken) throw new DreamLMAuthenticationError('An authenticated Supabase session is required.');
+
     const apiBaseUrl = import.meta.env.VITE_DREAMLM_API_URL?.trim();
     if (!apiBaseUrl) {
       throw new Error('VITE_DREAMLM_API_URL is missing. Configure it in .env.local and restart Vite.');
@@ -37,7 +46,10 @@ async function requestDreamLMResponse(message: string, sessionId: string): Promi
 
     const response = await fetch(`${apiBaseUrl.replace(/\/+$/, '')}/chat`, {
       method: 'POST',
-      headers: { 'Content-Type': 'application/json' },
+      headers: {
+        Authorization: `Bearer ${accessToken}`,
+        'Content-Type': 'application/json',
+      },
       body: JSON.stringify({ message, session_id: sessionId }),
     });
 
@@ -376,6 +388,10 @@ export default function App() {
         appendAssistantMessage(targetConvo.id, assistantResponse, userId);
       })
       .catch((error: unknown) => {
+        if (error instanceof DreamLMAuthenticationError) {
+          setCurrentScreen('login');
+          return;
+        }
         appendAssistantMessage(
           targetConvo.id,
           'DreamLM is temporarily unavailable. Please try again in a moment.',
@@ -416,6 +432,10 @@ export default function App() {
         );
       })
       .catch((error: unknown) => {
+        if (error instanceof DreamLMAuthenticationError) {
+          setCurrentScreen('login');
+          return;
+        }
         appendAssistantMessage(
           activeConversation.id,
           'DreamLM is temporarily unavailable. Please try again in a moment.',
