@@ -72,7 +72,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
   const [newUsername, setNewUsername] = useState('');
   const [newUserEmail, setNewUserEmail] = useState('');
   const [newUserRole, setNewUserRole] = useState<'Researcher' | 'Administrator'>('Researcher');
-  const [newUserStatus, setNewUserStatus] = useState<UserStatus>('Active');
+  const [newUserStatus, setNewUserStatus] = useState<UserStatus>('Pending');
 
   const refreshAdminData = async () => {
     setIsLoadingAdminData(true);
@@ -175,6 +175,7 @@ export const AdminView: React.FC<AdminViewProps> = ({
       onToast(`User "${newUsername.trim()}" added to Beta registry`);
       setNewUsername('');
       setNewUserEmail('');
+      setNewUserStatus('Pending');
       setIsAddUserModalOpen(false);
     } catch (error) {
       console.error('Failed to add beta user:', error);

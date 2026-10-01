@@ -3,7 +3,7 @@
  * SPDX-License-Identifier: Apache-2.0
  */
 
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useReducer } from 'react';
 import type { Session } from '@supabase/supabase-js';
 import { AppScreen } from './types.ts';
 import {
@@ -12,7 +12,13 @@ import {
   getStoredConversations,
   saveConversation,
   deleteStoredConversation,
+  isConversationOwner,
 } from './services/chatStorage.ts';
+import {
+  betaAccessReducer,
+  hasActiveBetaAccess,
+  initialBetaAccessState,
+} from './services/betaAccess.ts';
 import { hasAdminRole } from './services/adminAuth.ts';
 import { recordOrUpdateUser } from './services/userService.ts';
 import { supabase } from './services/supabaseClient.ts';
@@ -72,7 +78,7 @@ export default function App() {
 
   const [userSession, setCurrentUserSession] = useState<UserSession | null>(null);
   const [isAdminUser, setIsAdminUser] = useState(false);
-  const [isCurrentActiveUserBanned, setIsCurrentActiveUserBanned] = useState(false);
+  const [betaAccess, dispatchBetaAccess] = useReducer(betaAccessReducer, initialBetaAccessState);
   const [currentUserBanReason, setCurrentUserBanReason] = useState<string | undefined>();
   const [isAuthLoading, setIsAuthLoading] = useState(true);
   const [currentScreen, setCurrentScreen] = useState<AppScreen>('login');
@@ -92,40 +98,36 @@ export default function App() {
 
   useEffect(() => {
     if (!supabase) {
+      dispatchBetaAccess({ type: 'signed-out', revision: 1 });
       setIsAuthLoading(false);
       return;
     }
 
     let isMounted = true;
     let authRevision = 0;
-    const applyAuthSession = async (session: Session | null) => {
-      const revision = ++authRevision;
-      if (!isMounted) return;
+    const applyAuthSession = async (session: Session | null, revision: number) => {
+      if (!isMounted || revision !== authRevision) return;
 
       if (session?.user) {
         const userId = session.user.id;
-        if (conversationOwnerIdRef.current !== userId) {
-          conversationOwnerIdRef.current = userId;
-          setIsAuthLoading(true);
-          setConversationOwnerId(null);
-          setConversations([]);
-          setActiveConversationId(null);
-          setIsThinking(false);
-          setIsAccountPanelOpen(false);
-          setIsMobileSidebarOpen(false);
-          setConversations(getStoredConversations(userId));
-          setConversationOwnerId(userId);
-        }
+        setIsAuthLoading(true);
+        dispatchBetaAccess({ type: 'begin', userId, revision });
+        conversationOwnerIdRef.current = null;
+        setConversationOwnerId(null);
+        setConversations([]);
+        setActiveConversationId(null);
+        setIsThinking(false);
+        setIsAccountPanelOpen(false);
+        setIsMobileSidebarOpen(false);
 
         setIsAdminUser(hasAdminRole(session.user));
-        const email = session.user.email?.trim();
         const metadata = session.user.user_metadata;
         const metadataName = typeof metadata.full_name === 'string'
           ? metadata.full_name
           : typeof metadata.name === 'string'
             ? metadata.name
             : undefined;
-        const identity = email || metadataName || session.user.id;
+        const email = session.user.email?.trim();
         const username = metadataName || email || 'Researcher';
 
         setCurrentUserSession({
@@ -135,23 +137,30 @@ export default function App() {
           loginTime: new Date().toLocaleTimeString([], { hour: '2-digit', minute: '2-digit' }),
         });
         setCurrentScreen((screen) => screen === 'admin-login' ? screen : 'chat');
-        setIsAuthLoading(false);
 
         try {
-          const trackedUser = await recordOrUpdateUser(identity);
+          const trackedUser = await recordOrUpdateUser(userId);
           if (!isMounted || revision !== authRevision) return;
           setCurrentUserSession((current) => current
             ? { ...current, username: trackedUser.user?.username || current.username }
             : current);
-          setIsCurrentActiveUserBanned(trackedUser.status === 'Banned');
           setCurrentUserBanReason(trackedUser.user?.banReason);
+          dispatchBetaAccess({ type: 'resolved', userId, revision, status: trackedUser.status });
+          if (trackedUser.status === 'Active') {
+            conversationOwnerIdRef.current = userId;
+            setConversations(getStoredConversations(userId));
+            setConversationOwnerId(userId);
+          }
         } catch (error) {
           console.error('Beta user status lookup failed:', error);
           if (!isMounted || revision !== authRevision) return;
-          setIsCurrentActiveUserBanned(false);
+          dispatchBetaAccess({ type: 'failed', userId, revision });
           setCurrentUserBanReason(undefined);
+        } finally {
+          if (isMounted && revision === authRevision) setIsAuthLoading(false);
         }
       } else {
+        dispatchBetaAccess({ type: 'signed-out', revision });
         conversationOwnerIdRef.current = null;
         setConversationOwnerId(null);
         setConversations([]);
@@ -161,7 +170,6 @@ export default function App() {
         setIsMobileSidebarOpen(false);
         setIsAdminUser(false);
         setCurrentUserSession(null);
-        setIsCurrentActiveUserBanned(false);
         setCurrentUserBanReason(undefined);
         setCurrentScreen('login');
         setIsAuthLoading(false);
@@ -169,17 +177,23 @@ export default function App() {
     };
 
     const { data: { subscription } } = supabase.auth.onAuthStateChange((_event, session) => {
-      void applyAuthSession(session);
+      const revision = ++authRevision;
+      void applyAuthSession(session, revision);
     });
 
+    const initialRevision = authRevision;
     void supabase.auth.getSession()
       .then(({ data, error }) => {
         if (error) throw error;
-        return applyAuthSession(data.session);
+        if (initialRevision !== authRevision) return;
+        const revision = ++authRevision;
+        return applyAuthSession(data.session, revision);
       })
       .catch((error: unknown) => {
         console.error('Supabase session lookup failed:', error);
-        void applyAuthSession(null);
+        if (initialRevision !== authRevision) return;
+        const revision = ++authRevision;
+        void applyAuthSession(null, revision);
       });
 
     return () => {
@@ -213,7 +227,7 @@ export default function App() {
     isError = false,
     replaceMessageId?: string,
   ) => {
-    if (conversationOwnerIdRef.current !== userId) return;
+    if (!isConversationOwner(conversationOwnerIdRef.current, userId)) return;
 
     const assistantMsg = {
       id: `msg_${Date.now()}_a`,
@@ -227,7 +241,7 @@ export default function App() {
     };
 
     setConversations((prev) => {
-      if (conversationOwnerIdRef.current !== userId) return prev;
+      if (!isConversationOwner(conversationOwnerIdRef.current, userId)) return prev;
       return prev.map((conversation) => {
         if (conversation.id !== conversationId) return conversation;
         const messages = conversation.messages.filter((message) => message.id !== replaceMessageId);
@@ -270,7 +284,7 @@ export default function App() {
         showToast('Sign out failed. Please try again.');
         return;
       }
-      if (conversationOwnerIdRef.current === signingOutUserId) {
+      if (isConversationOwner(conversationOwnerIdRef.current, signingOutUserId || '')) {
         conversationOwnerIdRef.current = null;
         setConversationOwnerId(null);
         setConversations([]);
@@ -291,7 +305,7 @@ export default function App() {
   const handleDeleteConversation = (id: string, e?: React.MouseEvent) => {
     if (e) e.stopPropagation();
     const userId = userSession?.userId;
-    if (!userId || conversationOwnerIdRef.current !== userId) return;
+    if (!userId || !isConversationOwner(conversationOwnerIdRef.current, userId)) return;
     const updated = deleteStoredConversation(id, userId);
     setConversations(updated);
     if (activeConversationId === id) {
@@ -302,9 +316,9 @@ export default function App() {
 
   const handleRenameConversation = (id: string, newTitle: string) => {
     const userId = userSession?.userId;
-    if (!userId || conversationOwnerIdRef.current !== userId) return;
+    if (!userId || !isConversationOwner(conversationOwnerIdRef.current, userId)) return;
     setConversations((prev) => {
-      if (conversationOwnerIdRef.current !== userId) return prev;
+      if (!isConversationOwner(conversationOwnerIdRef.current, userId)) return prev;
       const updated = prev.map((c) => (c.id === id ? { ...c, title: newTitle } : c));
       const target = updated.find((c) => c.id === id);
       if (target) saveConversation(target, userId);
@@ -315,7 +329,7 @@ export default function App() {
 
   const handleSendMessage = (text: string) => {
     const userId = userSession?.userId;
-    if (!userId || conversationOwnerIdRef.current !== userId) return;
+    if (!userId || !isConversationOwner(conversationOwnerIdRef.current, userId)) return;
     const timestamp = new Date().toLocaleTimeString([], {
       hour: '2-digit',
       minute: '2-digit',
@@ -370,13 +384,13 @@ export default function App() {
         );
       })
       .finally(() => {
-        if (conversationOwnerIdRef.current === userId) setIsThinking(false);
+        if (isConversationOwner(conversationOwnerIdRef.current, userId)) setIsThinking(false);
       });
   };
 
   const handleRetryLastMessage = () => {
     const userId = userSession?.userId;
-    if (!userId || conversationOwnerIdRef.current !== userId || !activeConversation) return;
+    if (!userId || !isConversationOwner(conversationOwnerIdRef.current, userId) || !activeConversation) return;
     const retryTarget = [...activeConversation.messages]
       .reverse()
       .find((message) => message.role === 'assistant');
@@ -411,7 +425,7 @@ export default function App() {
         );
       })
       .finally(() => {
-        if (conversationOwnerIdRef.current === userId) setIsThinking(false);
+        if (isConversationOwner(conversationOwnerIdRef.current, userId)) setIsThinking(false);
       });
   };
 
@@ -435,12 +449,41 @@ export default function App() {
         <div className="min-h-screen flex items-center justify-center bg-surface p-space-lg text-sm text-on-surface-variant" role="status">
           Loading DreamLM workspace...
         </div>
-      ) : isCurrentActiveUserBanned && currentScreen === 'chat' ? (
+      ) : betaAccess.status === 'Banned' && currentScreen !== 'admin-panel' ? (
         <BannedScreen
           username={userSession?.username || 'User'}
           reason={currentUserBanReason}
           onSignOut={handleSignOut}
         />
+      ) : userSession && !hasActiveBetaAccess(betaAccess, userSession.userId) && currentScreen !== 'admin-panel' ? (
+        <main className="min-h-screen flex flex-col items-center justify-center gap-4 bg-surface p-space-lg text-center text-on-surface">
+          <h1 className="font-headline-lg text-headline-lg text-primary">
+            {betaAccess.status === 'Pending' ? 'Beta access pending' : 'Beta access unavailable'}
+          </h1>
+          <p className="max-w-md text-sm text-on-surface-variant" role="alert">
+            {betaAccess.status === 'Pending'
+              ? 'This account has not been approved for the private beta.'
+              : 'DreamLM could not verify private beta access. The workspace remains locked.'}
+          </p>
+          <div className="flex flex-wrap justify-center gap-3">
+            {isAdminUser && (
+              <button
+                className="min-h-11 rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-on-primary"
+                onClick={() => setCurrentScreen('admin-panel')}
+                type="button"
+              >
+                Open admin panel
+              </button>
+            )}
+            <button
+              className="min-h-11 rounded-lg border border-outline-variant px-4 py-2 text-sm font-semibold text-primary"
+              onClick={handleSignOut}
+              type="button"
+            >
+              Sign out
+            </button>
+          </div>
+        </main>
       ) : (
         <>
           {/* 1. Login Screen */}
@@ -485,7 +528,7 @@ export default function App() {
           )}
 
           {/* 4. Chat Workspace Screen */}
-          {currentScreen === 'chat' && !isAuthLoading && userSession && conversationOwnerId === userSession.userId && (
+          {currentScreen === 'chat' && !isAuthLoading && userSession && hasActiveBetaAccess(betaAccess, userSession.userId) && conversationOwnerId === userSession.userId && (
             <div className="flex h-screen h-dvh w-full overflow-hidden">
               {/* Sidebar */}
               <Sidebar

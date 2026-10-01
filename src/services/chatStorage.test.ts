@@ -4,6 +4,7 @@ import {
   Conversation,
   deleteStoredConversation,
   getStoredConversations,
+  isConversationOwner,
   saveConversation,
 } from './chatStorage.ts';
 
@@ -115,4 +116,10 @@ test('missing account identity cannot read or mutate unowned conversation storag
 
   assert.equal(storage.getItem('dreamlm_user_chats'), legacyConversations);
   assert.equal(storage.getItem('dreamlm_user_chats:legacy-unassigned'), null);
+});
+
+test('late API responses cannot be applied after switching conversation owners', () => {
+  assert.equal(isConversationOwner('supabase-user-a', 'supabase-user-a'), true);
+  assert.equal(isConversationOwner('supabase-user-b', 'supabase-user-a'), false);
+  assert.equal(isConversationOwner(null, 'supabase-user-a'), false);
 });

@@ -25,6 +25,10 @@ export interface UserSession {
   loginTime: string;
 }
 
+export function isConversationOwner(currentOwnerId: string | null, responseOwnerId: string): boolean {
+  return Boolean(responseOwnerId) && currentOwnerId === responseOwnerId;
+}
+
 const STORAGE_CHATS_KEY = 'dreamlm_user_chats';
 const LEGACY_CHATS_KEY = `${STORAGE_CHATS_KEY}:legacy-unassigned`;
 

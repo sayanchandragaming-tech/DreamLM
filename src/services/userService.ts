@@ -1,6 +1,7 @@
 import { supabase } from './supabaseClient.ts';
+import { isUserStatus, type UserStatus, withTimeout } from './betaAccess.ts';
 
-export type UserStatus = 'Pending' | 'Active' | 'Banned';
+export type { UserStatus } from './betaAccess.ts';
 
 export interface BetaUser {
   id: string;
@@ -107,24 +108,21 @@ export async function getAdminAuditEvents(): Promise<AdminAuditEvent[]> {
   }));
 }
 
-export async function recordOrUpdateUser(
-  _username: string,
-  _role: 'Researcher' | 'Administrator' = 'Researcher',
-): Promise<{ allowed: boolean; status: UserStatus; error?: string; user?: BetaUser }> {
-  const { data, error } = await getSupabase().rpc('ensure_current_beta_user');
+export async function recordOrUpdateUser(expectedUserId: string): Promise<{ status: UserStatus; user: BetaUser }> {
+  if (!expectedUserId.trim()) throw new Error('Authenticated user identity is missing.');
+
+  const { data, error } = await withTimeout(
+    getSupabase().rpc('ensure_current_beta_user'),
+    10_000,
+  );
   if (error) throw error;
 
   const row = (Array.isArray(data) ? data[0] : data) as BetaUserRow | null;
-  if (!row) throw new Error('Supabase did not return the authenticated beta user.');
+  if (!row || row.auth_user_id !== expectedUserId || !isUserStatus(row.status)) {
+    throw new Error('Supabase did not return a valid beta status for the authenticated user.');
+  }
   const user = mapBetaUser(row);
-  return {
-    allowed: user.status !== 'Banned',
-    status: user.status,
-    error: user.status === 'Banned'
-      ? `Account suspended. Reason: ${user.banReason || 'Access revoked by an administrator.'}`
-      : undefined,
-    user,
-  };
+  return { status: user.status, user };
 }
 
 export async function banUser(userId: string, reason?: string): Promise<void> {
@@ -177,7 +175,7 @@ export async function addBetaUser(user: {
       username: user.username.trim(),
       email: user.email?.trim() || null,
       directory_role: user.role || 'Researcher',
-      status: user.status || 'Active',
+      status: user.status || 'Pending',
       notes: user.notes?.trim() || null,
     })
     .select('id, auth_user_id, username, email, status, directory_role, notes, created_at, last_active_at, ban_reason, banned_at, banned_by')
